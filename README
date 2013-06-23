@@ -1,0 +1,54 @@
+/*! libmisc 
+ *#	A library of miscellaneous C functions I've written over time.
+ *#
+ *# Each of these modules is a combination of C source and header files.
+ *{
+ ** {*regex*} - A simple regular expression pattern matcher.
+ ** {*hash*} - A simple hash table implementation.
+ ** {*ini*} - A parser for {*.ini*} configuration files.
+ ** {*eval*} - A mathematical expression evaluator.
+ ** {*simil*} - Compares the {/similarity/} of two strings.
+ ** {*list*} - A generic linked list implementation with extra helper functions.
+ ** {*csv*} - A set of functions to read, write and manipulate Comma Separated Values (CSV) files.
+ ** {*getarg*} - An alternative to {{getopt()}} for platforms without it (like WIN32). 
+ ** {*utils*} - A couple of utility functions.
+ *}
+ *=
+ *# These modules have been written to conform to ANSI C and to be platform 
+ *# independent. If you have any problems compiling them with a standard C
+ *# compiler, please feel free to contact the author.
+ *#
+ *=
+ *# Effort has been made to keep the modules independent of each other (with
+ *# some minor exceptions), so that the individual files can be copied to other 
+ *# projects if you don't want to link your project to the {*libmisc*} library.
+ *#
+ *=
+ *# HTML documentation is created through the {{doc.awk}} Awk script, hence the
+ *# funny glyphs in the header and {{README}} files.
+ *=
+ *@ License: 
+ *# These sources are provided under a {{zlib/libpng}} license:
+ *[
+ *# Copyright (c) 2007-2008 Werner Stoop
+ *# 
+ *# This software is provided 'as-is', without any express or implied
+ *# warranty. In no event will the authors be held liable for any damages
+ *# arising from the use of this software.
+ *# 
+ *# Permission is granted to anyone to use this software for any purpose,
+ *# including commercial applications, and to alter it and redistribute it
+ *# freely, subject to the following restrictions:
+ *# 
+ *#     1. The origin of this software must not be misrepresented; you must not
+ *#     claim that you wrote the original software. If you use this software
+ *#     in a product, an acknowledgment in the product documentation would be
+ *#     appreciated but is not required.
+ *# 
+ *#     2. Altered source versions must be plainly marked as such, and must not be
+ *#     misrepresented as being the original software.
+ *# 
+ *#     3. This notice may not be removed or altered from any source
+ *#     distribution.
+ *]
+ */

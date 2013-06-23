@@ -1,0 +1,850 @@
+/*
+ *	This is a simple parser for .INI files. 
+ *	It is based around the syntax described in the Wikipedia entry at
+ *	"http://en.wikipedia.org/wiki/INI_file"
+ *
+ * See ini.h for more info
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include <ctype.h>
+#include <setjmp.h>
+
+#include <assert.h> /* Remember to define NDEBUG for release */
+
+#include "ini.h"
+#include "utils.h"
+
+/* Maximum number of characters expected on a line */
+#define MAX_LINE		1024
+
+/* Various error codes */
+#define SUCCESS		  				1
+#define FILE_CREATED  				0
+#define OUT_OF_MEMORY  				-1
+#define MISSING_END_BRACE 			-2
+#define EMPTY_SECTION  				-3
+#define EXPECTED_EQUALS 			-4
+#define EXPECTED_END_OF_STRING 		-5
+#define ER_INV_PARAM 				-6
+#define ER_FOPEN	 				-7
+#define BAD_SYMBOL 					-8
+#define EXPECTED_PARAMETER			-9
+#define EXPECTED_VALUE				-10
+
+const char *ini_errstr(int err)
+{
+	switch(err)
+	{
+		case SUCCESS : return "Success";
+		case FILE_CREATED: return "New INI object created";
+		case OUT_OF_MEMORY: return "Out of memory";
+		case MISSING_END_BRACE: return "Missing ']' at end of section";
+		case EMPTY_SECTION: return "Empty [] for section";
+		case EXPECTED_EQUALS : return "Expected an '='/':'";
+		case EXPECTED_VALUE : return "Expected a value";
+		case EXPECTED_END_OF_STRING : return "Expected an end of string";
+		case ER_FOPEN : return "Unable to open file";
+		case BAD_SYMBOL : return "Bad symbol";
+		case EXPECTED_PARAMETER : return "Expected a parameter (or section)";
+	}
+	return "Unknown";
+}
+
+/** Configurable parameters *************************************************/
+
+/* Define HASH_AS_COMMENT to allow '#' to be used as a comment delimiter */
+#define HASH_AS_COMMENT
+
+/*
+ *	Recursively adds sections to the tree of sections
+ */
+static void insert_section(ini_section *r, ini_section *n) {	
+	assert(r);
+	assert(n);
+	
+	if(my_stricmp(r->name, n->name) < 0) {
+		if(!r->left) 
+			r->left = n;
+		else
+			insert_section(r->left, n);
+	} else {
+		if(!r->right) 
+			r->right = n;
+		else
+			insert_section(r->right, n);
+	}		
+}
+
+/*
+ *	Searches a tree of pairs for a specific parameter
+ */
+static ini_pair *find_pair(ini_pair *root, const char *name) {
+	int c;
+	
+	if(!root) return NULL;
+		
+	c = my_stricmp(root->param, name);
+	if(c == 0) 
+		return root;
+	else if(c < 0)
+		return find_pair(root->left, name);
+	else
+		return find_pair(root->right, name);
+}
+ 
+/*
+ *	Searches for a specific section
+ */
+static ini_section *find_section(ini_section *root, const char *name) {
+	int c;
+	
+	if(!root) return NULL;
+		
+	c = my_stricmp(root->name, name);
+	if(c == 0) 
+		return root;
+	else if(c < 0)
+		return find_section(root->left, name);
+	else
+		return find_section(root->right, name);	
+}
+
+/*
+ *	Creates a new section, and adds it to a tree of sections
+ */
+static ini_section *add_section(ini_section **root, char *name) {
+	ini_section *n;
+	
+	assert(root);
+	assert(name);
+	
+	n = find_section(*root, name);
+	if(n) {
+		free(name);
+		return n;
+	}
+	
+	n = malloc(sizeof *n);
+	if(!n) return NULL;
+	
+	n->name = name;
+	
+	n->fields = NULL;
+	n->left = n->right = NULL;
+	
+	if(*root)
+		insert_section(*root, n);
+	else
+		*root = n;
+	
+	return n;
+}
+
+/*
+ *	Inserts a new pair n into a pair tree p
+ */
+static void insert_pair(ini_pair *p, ini_pair *n) {
+	if(my_stricmp(p->param, n->param) < 0) {
+		if(!p->left)
+			p->left = n;
+		else
+			insert_pair(p->left, n);
+	} else {		
+		if(!p->right)
+			p->right = n;
+		else
+			insert_pair(p->right, n);
+	}
+}
+
+/*
+ *	Adds a parameter-value pair to section s
+ */
+static ini_pair *add_pair(ini_section *s, char *p, char *v) {
+	ini_pair *n;
+	
+	assert(s);
+	
+	n = malloc(sizeof *n);
+	if(!n) return NULL;
+	
+	n->param = p;
+	n->value = v;
+	
+	n->left = n->right = NULL;
+	
+	if(!s->fields) 
+		s->fields = n;
+	else
+		insert_pair(s->fields, n);
+		
+	return n;	
+}
+
+/** Functions for memory deallocation ***************************************/
+
+/*
+ *	Free's a tree of parameter-value pairs
+ */
+static void free_pair(ini_pair *p) {
+	if(!p) return;
+	
+	free_pair(p->left);
+	free_pair(p->right);
+	
+	free(p->param);
+	free(p->value);
+	free(p);
+}
+
+/*
+ *	Free's all the memory allocated to a ini_section s
+ */
+static void free_section(ini_section *s) {
+	if(!s) return;
+	
+	free_section(s->left);
+	free_section(s->right);
+	
+	free(s->name);
+	free_pair(s->fields);	
+	free(s);
+}
+
+/*
+ *	Free's all the memory allocated to a ini_file object in ini_read()
+ */
+void ini_free(struct ini_file *ini) {
+	if(!ini) return;
+	free_pair(ini->globals);
+	free_section(ini->sections);	
+	free(ini);
+}
+
+/** Parsing functions *******************************************************/
+
+static struct ini_file *make_ini() {
+	struct ini_file *ini = malloc(sizeof *ini);
+	if(!ini) return NULL;
+	ini->globals = NULL;
+	ini->sections = NULL;
+	return ini;
+}
+
+/*
+ *	Reads an INI file and returns it as a ini_file object.
+ *	If filename is NULL, an empty ini_file object is created and returned.
+ */
+struct ini_file *ini_read(const char *filename, int *err, int *line) {
+	if(line) *line = 0;
+	if(!filename) {
+		if(err) *err = FILE_CREATED;
+		return make_ini();
+	} else {	
+		char *text = my_readfile(filename);
+		struct ini_file * ini = ini_parse(text, err, line);
+		free(text);
+		return ini;
+	}
+}
+
+/* The truth is that I want a INI-style configuration parser more than I want a 
+"real"/"MS compatible" INI parser */
+#if 1
+
+#define T_END		0
+#define T_VALUE		1
+
+static int get_token(const char **tp, const char **tstart, const char **tend, int *line, jmp_buf err) {
+	/* *tstart points to the start of the token, while *tend points one char past the end */
+	
+	const char *t = *tp;
+	int tok = T_END;
+	
+	assert(tp && tstart && tend);
+	
+whitespace:
+	while(isspace(t[0])) {
+		if(t[0] == '\n' && line) 
+			(*line)++;
+		t++;
+	}
+	if(t[0] == ';' || t[0] == '#') {
+		while(t[0] != '\n' && t[0] != '\0')
+			t++;
+		goto whitespace;
+	}
+	
+	*tstart = t;
+	*tend = t;
+	if(t[0]) {		
+		if(strchr("[]:=", t[0])) {
+			tok = *t++;
+		} else if(isalnum(t[0])) {
+			while(isalnum(t[0]) || strchr("_-.\\", t[0])) {
+				t++;
+			}
+			*tend = t;
+			tok = T_VALUE;
+		} else if(t[0] == '\"' || t[0] == '\'') {
+			char delim = t[0];			
+			if(t[1] == delim && t[2] == delim) {
+				/* """Python style long strings""" */
+				t += 3;
+				*tstart = t;
+				while(!(t[0] == delim && t[1] == delim && t[2] == delim)) {
+					if(t[0] == '\0') {
+						longjmp(err, EXPECTED_END_OF_STRING);
+					} else if(t[0] == '\\')
+						t++;
+					t++;
+				}
+				*tend = t;
+				t+=3;
+			} else {				
+				*tstart = ++t;
+				while(t[0] != delim) {
+					if(t[0] == '\0' || t[0] == '\n') {
+						longjmp(err, EXPECTED_END_OF_STRING);
+					} else if(t[0] == '\\')
+						t++;
+					t++;
+				}
+				*tend = t++;
+			}
+			tok = T_VALUE;
+		} else {
+			/* Unrecognized token */
+			longjmp(err, BAD_SYMBOL);
+		}
+	}
+
+	*tp = t;
+	return tok;
+}
+
+static char *get_string(const char *tstart, const char *tend, jmp_buf err) {
+	char *string, *s;
+	const char *i;
+	
+	assert(tend > tstart);
+	string = malloc(tend - tstart + 1);
+	if(!string)
+		longjmp(err, OUT_OF_MEMORY);
+	
+	for(i = tstart, s = string; i < tend; i++) {
+		if(i[0] == '\\') {
+			switch(*++i) {
+				case '\\':
+				case '\'':
+				case '\"': *s++ = i[0]; break;
+				case 'r': *s++ = '\r'; break;
+				case 'n': *s++ = '\n'; break;
+				case 't': *s++ = '\t'; break;
+				case '0': *s++ = '\0'; break;				
+				default: break;
+			}
+		} else {
+			*s++ = i[0];
+		}
+	}
+	assert(s - string <= tend - tstart);
+	s[0] = '\0';
+	return string;
+}
+
+struct ini_file *ini_parse(const char *text, int *err, int *line) {
+	jmp_buf on_error;
+	int e_code;
+	
+	struct ini_file *ini = NULL;
+	ini_section *cur_sec = NULL;
+	
+	const char *tstart, *tend;
+	
+	int t;
+	
+	if(err) *err = SUCCESS;
+	if(line) *line = 0;
+	
+	ini = make_ini();
+	
+	if((e_code = setjmp(on_error)) != 0) {
+		if(err) *err = e_code;
+		ini_free(ini);
+		return NULL;
+	}
+	
+	while((t = get_token(&text, &tstart, &tend, line, on_error)) != T_END) {
+		if(t == '[') {
+			char *section_name;
+			if(get_token(&text, &tstart, &tend, line, on_error) != T_VALUE) {
+				longjmp(on_error, EMPTY_SECTION);				
+			}
+			
+			section_name = get_string(tstart, tend, on_error);
+			
+			cur_sec = add_section(&ini->sections, section_name);
+			if(!cur_sec)
+				longjmp(on_error, OUT_OF_MEMORY);
+			
+			if(get_token(&text, &tstart, &tend, line, on_error) != ']') {
+				longjmp(on_error, MISSING_END_BRACE);				
+			}
+			
+		} else if (t == T_VALUE ) {
+			char *par, *val;
+			par = get_string(tstart, tend, on_error);
+			t = get_token(&text, &tstart, &tend, line, on_error);
+			if(t != '=' && t != ':') {
+				longjmp(on_error, EXPECTED_EQUALS);				
+			}
+			if(get_token(&text, &tstart, &tend, line, on_error) != T_VALUE) {
+				longjmp(on_error, EXPECTED_VALUE);
+			}
+			val = get_string(tstart, tend, on_error);
+			
+			if(cur_sec)
+				add_pair(cur_sec, par, val);
+			else {
+				/* Add the parameter and value to the INI file's globals */
+				ini_pair *pair;
+				if(!(pair = malloc(sizeof *pair)))
+					longjmp(on_error, OUT_OF_MEMORY);
+				
+				pair->param = par;
+				pair->value = val;
+				
+				pair->left = pair->right = NULL;
+					
+				if(!ini->globals)
+					ini->globals = pair;
+				else
+					insert_pair(ini->globals, pair);
+			}
+			
+			
+		} else 
+			longjmp(on_error, EXPECTED_PARAMETER);
+	}
+	
+	return ini;
+}
+#else
+/* The old parser function I'm trying to get rid of */
+struct ini_file *ini_parse(const char *text, int *err, int *line) {
+	char buf[MAX_LINE];
+	char *c, *i, *j, *par, *val;
+	int len;
+	
+	struct ini_file *ini = NULL;
+	ini_section *cur_sec = NULL;
+	
+	if(err) *err = SUCCESS;
+	if(line) *line = 0;
+	
+	ini = make_ini();
+	
+#define ERRMSG(x) do{if(err){*err=x;}goto error;}while(0)
+	
+	while(text && text[0] != '\0') {
+		/* Copy the next line into buf 
+		 * The reason for this kludge is because originally the file was
+		 * read line by line, and it would've been a lot of work to change this
+		 */
+		for(len = 0; text[0] && text[0] != '\n' && len < MAX_LINE-1; text++, len++)
+			buf[len] = text[0];
+		buf[len] = '\0';
+		text++;
+		
+		if(line) (*line)++;		
+		
+		/* Remove trailing carriage returns and newlines */
+		for(c = buf; c[0]; c++)
+			if(c[0] == '\r' || c[0] == '\n') {
+				c[0] = '\0';
+				break;
+			}
+		
+		/* Remove leading whitespace */
+		for(c = buf; c[0] && isspace(c[0]); c++);
+		
+		if(c[0] == ';' || c[0] == '\0') continue;
+#ifdef HASH_AS_COMMENT
+		if(c[0] == '#') continue;
+#endif	
+		
+		if(c[0] == '[') {
+			c++;
+			/* skip leading whitespace */
+			while(isspace(c[0])) c++;
+			for(i = c; i[0] && i[0] != ']'; i++);
+			if(i[0] != ']')
+				ERRMSG(MISSING_END_BRACE);
+			
+			/* remove trailing whitespace */
+			for(i--; isspace(i[0]) && i > c; i--);
+			
+			if(i <= c)
+				ERRMSG(EMPTY_SECTION);
+			
+			len = i - c + 1;
+			par = malloc(len + 1);
+			if(!par)
+				ERRMSG(OUT_OF_MEMORY);
+			
+			strncpy(par, c, len);
+			par[len] = '\0';
+			
+			/* printf("[%s]\n", par); */
+			cur_sec = add_section(&ini->sections, par);
+			if(!cur_sec)
+				ERRMSG(OUT_OF_MEMORY);
+		} else {
+			for(i = c; i[0] && !isspace(i[0]) && i[0] != '='; i++);
+				
+			len = i - c;
+			par = malloc(len + 1);
+			if(!par)
+				ERRMSG(OUT_OF_MEMORY);
+			
+			strncpy(par, c, len);
+			par[len] = '\0';
+			
+			for(c = i; c[0] && c[0] != '=' && isspace(c[0]); c++);
+			
+			if(c[0] != '=')
+				ERRMSG(EXPECTED_EQUALS);
+			
+			for(c++; c[0] && isspace(c[0]); c++);
+			
+			if(c[0]) {			
+				if(c[0] == '\"' || c[0] == '\'') {
+					/* FIXME: I really want a feature where you can
+						specify a multiline string, like Python's
+							"""This is 
+							a multiline
+							string"""
+						But you need to do it at the Lexer level.
+					*/
+					
+					/* Handle a quoted string */
+					
+					for(i = c + 1; i[0] && i[0] != c[0]; i++)
+						if(i[0] == '\\') 
+							i++;
+					
+					if(!i[0])
+						ERRMSG(EXPECTED_END_OF_STRING);
+						
+					len = i - c;
+					val = malloc(len + 1);
+					if(!val)
+						ERRMSG(OUT_OF_MEMORY);
+					
+					for(j = val, i = c + 1; i[0] != c[0]; ) {
+						if(i[0] == '\\') {
+							switch(i[1]) {
+								case '\\':
+								case '\'':
+								case '\"': *j++ = i[1]; break;
+								case 'r': *j++ = '\r'; break;
+								case 'n': *j++ = '\n'; break;
+								case 't': *j++ = '\t'; break;
+								case '0': *j++ = '\0'; break;
+								
+								default: break;
+							}
+							i += 2;
+						}
+						else
+							*j++ = *i++;
+					}
+					
+					assert(j - val <= len);					
+					j[0] = '\0';
+				} else {
+#ifdef HASH_AS_COMMENT
+					for(i = c; i[0] && i[0] != ';' && i[0] != '#'; i++);
+#else				
+					for(i = c; i[0] && i[0] != ';'; i++);
+#endif	
+					/* Remove trailing whitespace */
+					for(i--; isspace(i[0]) && i > c; i--);
+					i++;
+					
+					len = i - c;
+					val = malloc(len + 1);
+					if(!val)
+						ERRMSG(OUT_OF_MEMORY);
+					
+					strncpy(val, c, len);
+					val[len] = '\0';
+					
+					/*
+					 * TODO: Values on lines ending with backslash '\'
+					 *	should be concatenated with the next line
+					 */
+				}
+			} else
+				val = my_strdup("");
+			
+			if(cur_sec)
+				add_pair(cur_sec, par, val);
+			else {
+				/* Add the parameter and value to the INI file's globals */
+				ini_pair *pair;
+				if(!(pair = malloc(sizeof *pair)))
+					ERRMSG(OUT_OF_MEMORY);
+				
+				pair->param = par;
+				pair->value = val;
+				
+				pair->left = pair->right = NULL;
+					
+				if(!ini->globals)
+					ini->globals = pair;
+				else
+					insert_pair(ini->globals, pair);
+			}
+		}
+	} /* while */
+	
+	return ini;
+	
+error:
+	ini_free(ini);
+	return NULL;
+	
+#undef ERRMSG
+}
+#endif
+
+/** Printing functions ******************************************************/
+
+/*
+ *	Recursively prints a tree of ini_pairs
+ */
+static void write_pair(ini_pair *p, FILE *f) {
+	char *c;
+	if(!p) return;
+	
+	/* FIXME: The rows should be saved as:
+			"parameter" = "value"
+		(with the quotes)
+		always, so that the INI can be used
+		as a simple key-value store.
+	*/
+	fprintf(f, "%s = ", p->param);	
+	if(strpbrk(p->value, ";#\r\n\t\"\'\\")) {
+		fprintf(f, "\"");
+		for(c = p->value; c[0]; c++) {
+			switch(c[0]) {
+				case '\n': fprintf(f, "\\n"); break;
+				case '\r': fprintf(f, "\\r"); break;
+				case '\t': fprintf(f, "\\t"); break;
+				case '\"': fprintf(f, "\\\""); break;
+				case '\'': fprintf(f, "\\\'"); break;
+				case '\\': fprintf(f, "\\\\"); break;
+				default : fprintf(f, "%c", c[0]); break;
+			}
+		}
+		fprintf(f, "\"\n");
+	} else
+		fprintf(f, "%s\n", p->value);
+	
+	write_pair(p->left, f);
+	write_pair(p->right, f);
+}
+
+/*
+ *	Recursively prints a tree of INI sections
+ */
+static void write_section(ini_section *s, FILE *f) {
+	if(!s) return;
+		
+	fprintf(f, "\n[%s]\n", s->name);
+	write_pair(s->fields, f);
+	
+	/* The akward sequence is to ensure that values are not written sorted */
+	
+	write_section(s->left, f);
+	write_section(s->right, f);
+}
+
+/*
+ *	Saves all the sections and parameters in an ini_file to a file.
+ *	If fname is NULL, it is written to stdout.
+ */
+int ini_write(struct ini_file *ini, const char *fname) {	
+	FILE *f;
+	
+	if(fname) {	
+		f = fopen(fname, "w");
+		if(!f)
+			return ER_FOPEN;
+	} else
+		f = stdout;
+	
+	write_pair(ini->globals, f);
+	write_section(ini->sections, f);
+	
+	if(fname) 
+		fclose(f);
+		
+	return SUCCESS;
+}
+
+/****************************************************************************/
+
+int ini_has_section(struct ini_file *ini, const char *sec) {
+	return find_section(ini->sections, sec) != NULL;
+}
+
+/*
+ *	Finds a specific parameter-value pair in the configuration file
+ */
+static ini_pair *find_param(const struct ini_file *ini, 
+							const char *sec, 
+							const char *par) {
+	ini_section *s;
+	ini_pair *p;
+	
+	if(!ini) return NULL;
+	
+	if(sec) {
+		s = find_section(ini->sections, sec);
+		if(!s) return NULL;	
+		p = s->fields;
+	} else
+		p = ini->globals;
+	
+	if(!p) return NULL;
+		
+	return find_pair(p, par);	
+}
+
+/*
+ *	Retrieves a parameter 'par' from a section 'sec' within the ini_file 'ini'
+ *	and returns its value.
+ *	If 'sec' is NULL, the global parameters ini 'ini' are searched.
+ *	If the value is not found, 'def' is returned. 
+ *	It returns a string. Functions like atoi(), atof(), strtol() and even 
+ *	sscanf() can be used to convert it to the relevant type.
+ */
+const char *ini_get(struct ini_file *ini, 
+					const char *sec, 
+					const char *par, 
+					const char *def) {
+	ini_pair *p;
+	
+	p = find_param(ini, sec, par);
+	if(!p) {
+		if(def) 
+			ini_put(ini, sec, par, def);
+		return def;
+	}
+	
+	return p->value;
+}
+
+/*
+ *	Sets a parameter 'par' in section 'sec's value to 'val', replacing the 
+ *	current value if it already exists, or creates the section if it does not 
+ *	exist
+ */
+int ini_put(struct ini_file *ini, const char *sec, const char *par, const char *val) {
+	ini_section *s;
+	ini_pair *p, **pp;
+	
+	if(!ini || !val) return 0;
+	
+	p = find_param(ini, sec, par);
+	if(p) {
+		/* Replace the existing value */
+		char *t = p->value;
+		if(!(p->value = my_strdup(val))) {
+			p->value = t;
+			return 0;
+		}
+				
+		free(t);
+		return 1;
+	}
+	
+	if(sec) {
+		s = find_section(ini->sections, sec);
+		if(!s) {
+			/* Create a new section */			
+			if(!(s = malloc(sizeof *s))) return 0;			
+			if(!(s->name = my_strdup(sec))) {
+				free(s);
+				return 0;
+			}
+			
+			s->fields = NULL;
+			s->left = s->right = NULL;
+			
+			if(ini->sections)
+				insert_section(ini->sections, s);
+			else
+				ini->sections = s;
+		}
+		
+		pp = &s->fields;
+	} else
+		pp = &ini->globals;
+	
+	if(!(p = malloc(sizeof *p)))
+		return 0;
+	
+	if(!(p->param = my_strdup(par)) || !(p->value = my_strdup(val))) {
+		free(p);
+		return 0;
+	}
+	
+	p->left = p->right = NULL;
+	
+	if(!*pp)
+		*pp = p;
+	else
+		insert_pair(*pp, p);
+		
+	return 1;	
+}
+
+/*
+ *	ini_putf() takes a printf() style format string and uses vsnprintf() to
+ *	pass a value to ini_put(). This function is intended for placing 
+ *	data types that are not strings into the ini_file
+ *	
+ *	The other parameters are the same as those of ini_put().
+ */
+int ini_putf(struct ini_file *ini, 
+			const char *sec, 
+			const char *par, 
+			const char *fmt, 
+			...) {
+	char buffer[MAX_LINE];
+	va_list arg;
+	
+	va_start(arg, fmt);
+  	
+#ifdef _MSC_VER /* Microsoft Visual C++? */
+	/* VC++ messes around with _'s before vsnprintf(): */
+#define	vsnprintf _vsnprintf
+#endif
+
+#if 1 
+	vsnprintf(buffer, MAX_LINE, fmt, arg);	
+#else
+	vsprintf(buffer, fmt, arg );	
+	assert(strlen(buffer) < MAX_LINE);
+#endif
+	va_end(arg);
+	
+	return ini_put(ini, sec, par, buffer);
+}
