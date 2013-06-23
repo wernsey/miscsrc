@@ -44,7 +44,8 @@
  *} 
  *=
  *[
- *# Copyright (c) 2007-2009 Werner Stoop, zlib/libpng license.
+ *# This software is provided under the terms of the unlicense.
+ *# See http://unlicense.org/ for more details.
  *]
  *=
  */

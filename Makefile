@@ -63,7 +63,7 @@ docs :
 docs/%.html : %.h
 	awk -f doc.awk -vtitle=$< $< > $@ 
 
-docs/readme.html: README doc.awk
+docs/readme.html: README.md doc.awk
 	awk -f doc.awk -vtitle=$< $< > $@ 
 	
 .PHONY : clean 

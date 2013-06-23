@@ -428,36 +428,32 @@ struct ini_file *ini_parse(const char *text, int *err, int *line) {
 
 /** Printing functions ******************************************************/
 
+static void string_to_file(FILE *f, const char *s) {
+	fputc('\"', f);
+	for(; s[0]; s++) {
+		switch(s[0]) {
+			case '\n': fputs("\\n",f); break;
+			case '\r': fputs("\\r",f); break;
+			case '\t': fputs("\\t",f); break;
+			case '\"': fputs("\\\"",f); break;
+			case '\'': fputs("\\\'",f); break;
+			case '\\': fputs("\\\\",f); break;
+			default : fputc(s[0], f); break;
+		}
+	}
+	fputc('\"', f);
+}
+
 /*
  *	Recursively prints a tree of ini_pairs
  */
 static void write_pair(ini_pair *p, FILE *f) {
-	char *c;
 	if(!p) return;
 	
-	/* FIXME: The rows should be saved as:
-			"parameter" = "value"
-		(with the quotes)
-		always, so that the INI can be used
-		as a simple key-value store.
-	*/
-	fprintf(f, "%s = ", p->param);	
-	if(strpbrk(p->value, ";#\r\n\t\"\'\\")) {
-		fprintf(f, "\"");
-		for(c = p->value; c[0]; c++) {
-			switch(c[0]) {
-				case '\n': fprintf(f, "\\n"); break;
-				case '\r': fprintf(f, "\\r"); break;
-				case '\t': fprintf(f, "\\t"); break;
-				case '\"': fprintf(f, "\\\""); break;
-				case '\'': fprintf(f, "\\\'"); break;
-				case '\\': fprintf(f, "\\\\"); break;
-				default : fprintf(f, "%c", c[0]); break;
-			}
-		}
-		fprintf(f, "\"\n");
-	} else
-		fprintf(f, "%s\n", p->value);
+	string_to_file(f, p->param);
+	fputs(" = ", f);	
+	string_to_file(f, p->value);
+	fputc('\n', f);
 	
 	write_pair(p->left, f);
 	write_pair(p->right, f);
@@ -469,7 +465,10 @@ static void write_pair(ini_pair *p, FILE *f) {
 static void write_section(ini_section *s, FILE *f) {
 	if(!s) return;
 		
-	fprintf(f, "\n[%s]\n", s->name);
+	fputs("\n[", f);
+	string_to_file(f, s->name);
+	fputs("]\n", f);
+	
 	write_pair(s->fields, f);
 	
 	/* The akward sequence is to ensure that values are not written sorted */
