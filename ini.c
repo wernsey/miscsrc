@@ -472,10 +472,7 @@ struct ini_file *ini_parse(const char *text, int *err, int *line) {
 		/* Remove leading whitespace */
 		for(c = buf; c[0] && isspace(c[0]); c++);
 		
-		if(c[0] == ';' || c[0] == '\0') continue;
-#ifdef HASH_AS_COMMENT
-		if(c[0] == '#') continue;
-#endif	
+		if(c[0] == ';' || c[0] == '\0' || c[0] == '#') continue;
 		
 		if(c[0] == '[') {
 			c++;
@@ -567,11 +564,7 @@ struct ini_file *ini_parse(const char *text, int *err, int *line) {
 					assert(j - val <= len);					
 					j[0] = '\0';
 				} else {
-#ifdef HASH_AS_COMMENT
 					for(i = c; i[0] && i[0] != ';' && i[0] != '#'; i++);
-#else				
-					for(i = c; i[0] && i[0] != ';'; i++);
-#endif	
 					/* Remove trailing whitespace */
 					for(i--; isspace(i[0]) && i > c; i--);
 					i++;
