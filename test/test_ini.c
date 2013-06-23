@@ -19,15 +19,12 @@ int main(int argc, char *argv[])
 	int i, err, line;
 	struct ini_file *ini;	
 	
-	if(argc > 1)
-	{
+	if(argc > 1) {
 		/* read all the INI files and print them: */
-		for(i = 1; i < argc; i++)
-		{
+		for(i = 1; i < argc; i++) {
 			/* Read the INI file */
 			ini = ini_read(argv[i], &err, &line);
-			if(!ini)
-			{
+			if(!ini) {
 				fprintf(stderr, "Error: Unable to read \"%s\": %s on line %d\n", TEST_FILE, ini_errstr(err), line);
 				return 1;
 			}
@@ -43,16 +40,14 @@ int main(int argc, char *argv[])
 	
 	/* Create a test file: You can look at its contents for the
 	supported syntax */
-	if(!write_test_file())
-	{
+	if(!write_test_file()) {
 		fprintf(stderr, "Unable to create test file\n");
 		return 1;
 	}
 	
 	/* Read the INI file */
 	ini = ini_read(TEST_FILE, &err, &line);
-	if(!ini)
-	{
+	if(!ini) {
 		fprintf(stderr, "Error: Unable to read \"%s\": %s on line %d\n", TEST_FILE, ini_errstr(err), line);
 		return 1;
 	}
@@ -132,8 +127,7 @@ int main(int argc, char *argv[])
 	
 	/* Create an empty ini_file object by passing NULL to ini_read() */
 	ini = ini_read(NULL, &err, &line);
-	if(!ini)
-	{
+	if(!ini) {
 		/* The line is irrelevant here */
 		fprintf(stderr, "Error: Unable to create empty file: %s\n", ini_errstr(err));		
 		return 1;
@@ -164,48 +158,45 @@ int main(int argc, char *argv[])
  *	I'd rather recommend ini_write() to create INI files programatically,
  *	but that does not demonstrate what I want to demonstrate
  */
-int write_test_file()
-{
+int write_test_file() {
 	FILE *f;
 	f = fopen(TEST_FILE, "w");
 	if(!f) return 0;
 	
 	fprintf(f,	"; This is a sample INI file to demonstrate the syntax\n"
 				"; lines starting with semicolons are comments\n"
-#ifdef HASH_AS_COMMENT
 				"# lines starting with hashes are also comments\n"
-#endif
 				"\n"
 				"; Parameters outside of sections are considered global\n"
 				"; Parameters are specified like \"parameter = value\""
 				" as follows:\n"
 				"global1 = value1 ; Comments may follow values\n"
-				"global2 = another global variable ; values may contain" 
-				" whitespace\n"
-				"; (but parameters may not)\n"
+				"global2 = \"another global variable\" \n"
+				"a-long-string : \"\"\"This String is very long,\nspans multiple lines,\nand uses \\\"\\\"\\\" to delimit it. \"\"\"\n"
+				"\n");
+	fprintf(f,	"[ Numbers ]\n"
+				"x : 3.5\n"
+				"y = 7.25\n"
 				"\n");
 	fprintf(f,	"; Sections are specified within square brackets\n"
 				"[first_section]\n"
 				" parameter1 = value1\n"
-#ifdef HASH_AS_COMMENT
-				" ; To use semicolons and hashes within values\n"
-#else
-				" ; To use semicolons within values\n"
-#endif
+				" # To use semicolons and hashes within values:\n"
 				" ; specify them within quotes:\n"
 				" parameter2 = \"#value 2;\"\n"
 				" ; Duplicate parameters are allowed, but only the first\n"
 				" ; is \"seen\" by ini_get():\n"
 				" parameter2 = foo\n" 
 				"\n");
+				
 	fprintf(f,	"  ; Whitespace is insignificant: \n"
 				"  [  second_section  ]\n"
 				" parameter1 = value1\n"
 				" ; C type escapes can be used within quoted values: \n"
 				" parameter2 = \"To specify a backslash: \\\\\"\n"				
-				" parameter3 = \"To specify a tab: \\t\"\n"
-				" parameter4 = \"To specify a newline: \\n\"\n"
-				" parameter5 = \"To specify a carriage return: \\r\"\n");
+				" parameter_3 = \"To specify a tab: \\t\"\n"
+				" parameter-4 = \"To specify a newline: \\n\"\n"
+				" parameter.5 = \"To specify a carriage return: \\r\"\n");
 	fclose(f);
 	return 1;
 }
