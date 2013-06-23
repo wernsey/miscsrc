@@ -28,11 +28,10 @@
 #define EMPTY_SECTION  				-3
 #define EXPECTED_EQUALS 			-4
 #define EXPECTED_END_OF_STRING 		-5
-#define ER_INV_PARAM 				-6
-#define ER_FOPEN	 				-7
-#define BAD_SYMBOL 					-8
-#define EXPECTED_PARAMETER			-9
-#define EXPECTED_VALUE				-10
+#define ER_FOPEN	 				-6
+#define BAD_SYMBOL 					-7
+#define EXPECTED_PARAMETER			-8
+#define EXPECTED_VALUE				-9
 
 const char *ini_errstr(int err)
 {
@@ -44,19 +43,16 @@ const char *ini_errstr(int err)
 		case MISSING_END_BRACE: return "Missing ']' at end of section";
 		case EMPTY_SECTION: return "Empty [] for section";
 		case EXPECTED_EQUALS : return "Expected an '='/':'";
-		case EXPECTED_VALUE : return "Expected a value";
 		case EXPECTED_END_OF_STRING : return "Expected an end of string";
 		case ER_FOPEN : return "Unable to open file";
 		case BAD_SYMBOL : return "Bad symbol";
 		case EXPECTED_PARAMETER : return "Expected a parameter (or section)";
+		case EXPECTED_VALUE : return "Expected a value";
 	}
 	return "Unknown";
 }
 
 /** Configurable parameters *************************************************/
-
-/* Define HASH_AS_COMMENT to allow '#' to be used as a comment delimiter */
-#define HASH_AS_COMMENT
 
 /*
  *	Recursively adds sections to the tree of sections
@@ -251,10 +247,6 @@ struct ini_file *ini_read(const char *filename, int *err, int *line) {
 	}
 }
 
-/* The truth is that I want a INI-style configuration parser more than I want a 
-"real"/"MS compatible" INI parser */
-#if 1
-
 #define T_END		0
 #define T_VALUE		1
 
@@ -433,188 +425,6 @@ struct ini_file *ini_parse(const char *text, int *err, int *line) {
 	
 	return ini;
 }
-#else
-/* The old parser function I'm trying to get rid of */
-struct ini_file *ini_parse(const char *text, int *err, int *line) {
-	char buf[MAX_LINE];
-	char *c, *i, *j, *par, *val;
-	int len;
-	
-	struct ini_file *ini = NULL;
-	ini_section *cur_sec = NULL;
-	
-	if(err) *err = SUCCESS;
-	if(line) *line = 0;
-	
-	ini = make_ini();
-	
-#define ERRMSG(x) do{if(err){*err=x;}goto error;}while(0)
-	
-	while(text && text[0] != '\0') {
-		/* Copy the next line into buf 
-		 * The reason for this kludge is because originally the file was
-		 * read line by line, and it would've been a lot of work to change this
-		 */
-		for(len = 0; text[0] && text[0] != '\n' && len < MAX_LINE-1; text++, len++)
-			buf[len] = text[0];
-		buf[len] = '\0';
-		text++;
-		
-		if(line) (*line)++;		
-		
-		/* Remove trailing carriage returns and newlines */
-		for(c = buf; c[0]; c++)
-			if(c[0] == '\r' || c[0] == '\n') {
-				c[0] = '\0';
-				break;
-			}
-		
-		/* Remove leading whitespace */
-		for(c = buf; c[0] && isspace(c[0]); c++);
-		
-		if(c[0] == ';' || c[0] == '\0' || c[0] == '#') continue;
-		
-		if(c[0] == '[') {
-			c++;
-			/* skip leading whitespace */
-			while(isspace(c[0])) c++;
-			for(i = c; i[0] && i[0] != ']'; i++);
-			if(i[0] != ']')
-				ERRMSG(MISSING_END_BRACE);
-			
-			/* remove trailing whitespace */
-			for(i--; isspace(i[0]) && i > c; i--);
-			
-			if(i <= c)
-				ERRMSG(EMPTY_SECTION);
-			
-			len = i - c + 1;
-			par = malloc(len + 1);
-			if(!par)
-				ERRMSG(OUT_OF_MEMORY);
-			
-			strncpy(par, c, len);
-			par[len] = '\0';
-			
-			/* printf("[%s]\n", par); */
-			cur_sec = add_section(&ini->sections, par);
-			if(!cur_sec)
-				ERRMSG(OUT_OF_MEMORY);
-		} else {
-			for(i = c; i[0] && !isspace(i[0]) && i[0] != '='; i++);
-				
-			len = i - c;
-			par = malloc(len + 1);
-			if(!par)
-				ERRMSG(OUT_OF_MEMORY);
-			
-			strncpy(par, c, len);
-			par[len] = '\0';
-			
-			for(c = i; c[0] && c[0] != '=' && isspace(c[0]); c++);
-			
-			if(c[0] != '=')
-				ERRMSG(EXPECTED_EQUALS);
-			
-			for(c++; c[0] && isspace(c[0]); c++);
-			
-			if(c[0]) {			
-				if(c[0] == '\"' || c[0] == '\'') {
-					/* FIXME: I really want a feature where you can
-						specify a multiline string, like Python's
-							"""This is 
-							a multiline
-							string"""
-						But you need to do it at the Lexer level.
-					*/
-					
-					/* Handle a quoted string */
-					
-					for(i = c + 1; i[0] && i[0] != c[0]; i++)
-						if(i[0] == '\\') 
-							i++;
-					
-					if(!i[0])
-						ERRMSG(EXPECTED_END_OF_STRING);
-						
-					len = i - c;
-					val = malloc(len + 1);
-					if(!val)
-						ERRMSG(OUT_OF_MEMORY);
-					
-					for(j = val, i = c + 1; i[0] != c[0]; ) {
-						if(i[0] == '\\') {
-							switch(i[1]) {
-								case '\\':
-								case '\'':
-								case '\"': *j++ = i[1]; break;
-								case 'r': *j++ = '\r'; break;
-								case 'n': *j++ = '\n'; break;
-								case 't': *j++ = '\t'; break;
-								case '0': *j++ = '\0'; break;
-								
-								default: break;
-							}
-							i += 2;
-						}
-						else
-							*j++ = *i++;
-					}
-					
-					assert(j - val <= len);					
-					j[0] = '\0';
-				} else {
-					for(i = c; i[0] && i[0] != ';' && i[0] != '#'; i++);
-					/* Remove trailing whitespace */
-					for(i--; isspace(i[0]) && i > c; i--);
-					i++;
-					
-					len = i - c;
-					val = malloc(len + 1);
-					if(!val)
-						ERRMSG(OUT_OF_MEMORY);
-					
-					strncpy(val, c, len);
-					val[len] = '\0';
-					
-					/*
-					 * TODO: Values on lines ending with backslash '\'
-					 *	should be concatenated with the next line
-					 */
-				}
-			} else
-				val = my_strdup("");
-			
-			if(cur_sec)
-				add_pair(cur_sec, par, val);
-			else {
-				/* Add the parameter and value to the INI file's globals */
-				ini_pair *pair;
-				if(!(pair = malloc(sizeof *pair)))
-					ERRMSG(OUT_OF_MEMORY);
-				
-				pair->param = par;
-				pair->value = val;
-				
-				pair->left = pair->right = NULL;
-					
-				if(!ini->globals)
-					ini->globals = pair;
-				else
-					insert_pair(ini->globals, pair);
-			}
-		}
-	} /* while */
-	
-	return ini;
-	
-error:
-	ini_free(ini);
-	return NULL;
-	
-#undef ERRMSG
-}
-#endif
 
 /** Printing functions ******************************************************/
 
