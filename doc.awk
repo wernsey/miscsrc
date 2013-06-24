@@ -6,7 +6,7 @@ BEGIN {
 	print "pre {background:rgb(245,255,245);color:rgb(64,128,64);margin-left:30px;margin-right:30px}";
 	print "h2 {background:rgb(230,255,230);text-align:center}";
 	print "h3 {font-family:monospace;color:rgb(64,128,64);background:rgb(240,255,240)}";
-	print "body {font-family:arial, "lucida console", sans-serif;margin-left:20px;margin-right:20px}";
+	print "body {font-family:Arial, Verdana, Helvetica, sans-serif;margin-left:20px;margin-right:20px}";
 	print "--></style>";
 	print "</head><body>";
 }
