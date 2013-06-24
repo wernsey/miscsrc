@@ -16,7 +16,7 @@ BEGIN {
 /\*!/ { if(!comment) next; s = substr($0, index($0, "*!") + 2); print "<h2><tt>" filter(s) "</tt></h2>"; next;}
 /\*@/ { if(!comment) next; s = substr($0, index($0, "*@") + 2); print "<h3><tt>" filter(s) "</tt></h3>"; next;}
 /\*#[ \t]*$/ { if(!comment) next; if(!pre) print "<br>"; next;}
-/\*#/ { if(!comment) next; s = substr($0, index($0, "*#") + 2); if(pre) print s; else print filter(s); next;}
+/\*#/ { if(!comment) next; s = substr($0, index($0, "*#") + 2); print filter(s);}
 /\*&/ { if(!comment) next; s = substr($0, index($0, "*&") + 2); print "<tt>" filter(s) "</tt><br>"; next;}
 /\*x/ { if(!comment) next; s = substr($0, index($0, "*x") + 2); print "<br><b>Example:</b><tt>" filter(s) "</tt>"; next;}
 /\*\[/ { if(!comment) next; pre=1; print "<pre>"; next;}
