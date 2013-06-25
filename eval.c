@@ -2,6 +2,9 @@
  * Mathematical expression evaluator.
  *
  * See eval.h for more info
+ *
+ * This is free and unencumbered software released into the public domain.
+ * http://unlicense.org/
  */
  
 /*

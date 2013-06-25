@@ -46,7 +46,7 @@ list.o: list.h
 
 # Test programs: Compile .o to executable
 test_%: test_%.o libmisc.a
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CC) $(LDFLAGS) -o $@ $^ -lm
 	
 # Test program dependencies
 test_csv.o : csv.h

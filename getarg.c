@@ -11,6 +11,9 @@
  *	with "arg"
  *
  * See getarg.h for more info
+ *
+ * This is free and unencumbered software released into the public domain.
+ * http://unlicense.org/
  */
  
 #include <stdio.h>

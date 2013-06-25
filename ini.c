@@ -4,6 +4,9 @@
  *	"http://en.wikipedia.org/wiki/INI_file"
  *
  * See ini.h for more info
+ *
+ * This is free and unencumbered software released into the public domain.
+ * http://unlicense.org/
  */
 #include <stdio.h>
 #include <stdlib.h>

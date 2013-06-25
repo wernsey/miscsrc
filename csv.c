@@ -1,3 +1,12 @@
+/*
+ * A set of functions for the manipulation of RFC 4180 style
+ * Comma Separated Values (CSV) files.
+ *
+ * See csv.h for more info
+ *
+ * This is free and unencumbered software released into the public domain.
+ * http://unlicense.org/
+ */
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>

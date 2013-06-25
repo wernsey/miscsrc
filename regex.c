@@ -8,6 +8,9 @@
  *	http://www.ddj.com/dept/architect/184410904
  *
  * See regex.h for more details
+ *
+ * This is free and unencumbered software released into the public domain.
+ * http://unlicense.org/
  */
 
 #include <stdlib.h>

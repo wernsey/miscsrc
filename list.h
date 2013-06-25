@@ -32,6 +32,7 @@
  *}
  *-
  *[
+ *# Author: Werner Stoop
  *# This software is provided under the terms of the unlicense.
  *# See http://unlicense.org/ for more details.
  *]
@@ -116,7 +117,7 @@ list_element *list_append(link_list *list, void *data);
  *# Adds an element to the end of the list.\n
  *# It's defined as a macro around {{~~list_append()}}.
  */
-#define list_insert(list, data) (list_insert((list), (data)))
+#define list_insert(list, data) (list_append((list), (data)))
 
 /*@ list_element *##list_prepend(link_list *list, void *data);
  *# Adds an element to the front of the list.\n
@@ -217,6 +218,15 @@ int list_strcmp(void *, void *);
  *# This is a case-insensitive version of list_strcmp
  */
 int list_stricmp(void *, void *);
+
+/*@ #define ##list_for_each(element, in_list)
+ *# Macro that wraps around a {{{for}}} loop to iterate over each element
+ *# in a list:\n
+ *# {{{for(element = in_list->first; element; element = element->next)}}}\n
+ *# Use like so:
+ *# {{{list_for_each(element, my_list) { Blob *b = element->data; ... } }}}
+ */
+#define list_for_each(element, in_list) for(element = in_list->first; element; element = element->next)
 
 #if defined(__cplusplus) || defined(c_plusplus)
 } /* extern "C" */

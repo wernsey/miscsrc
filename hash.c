@@ -2,6 +2,9 @@
  * A quick and dirty hash table implementation.
  *
  * See hash.h for more info
+ *
+ * This is free and unencumbered software released into the public domain.
+ * http://unlicense.org/
  */
 
 #include <stdlib.h>

@@ -1,5 +1,8 @@
 /*
  * See list.h for more info
+ *
+ * This is free and unencumbered software released into the public domain.
+ * http://unlicense.org/
  */
  
 #include <stdlib.h>
@@ -26,20 +29,14 @@ link_list *list_create()
 
 /*****************************************************************************/
 
-static void element_destroy(list_element *el, list_dtor dtor)
-{
-	if(!el)
-		return;
-	element_destroy(el->next, dtor);
-	if(dtor) dtor(el->data);
-	free(el);
-}
-
-/*****************************************************************************/
-
 void list_destroy(link_list *list, list_dtor dtor)
 {
-	element_destroy(list->first, dtor);	
+	while(list->first) {
+		list_element *next = list->first->next;
+		if(dtor) dtor(list->first->data);
+		free(list->first);
+		list->first = next;
+	}	
 	free(list);
 }
 
