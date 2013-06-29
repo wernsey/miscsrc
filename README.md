@@ -14,6 +14,8 @@ The modules include: A simple regular expression pattern matcher,
 * A couple of utility functions.
 
 
+-------------------------------------------------------------------------------
+These sources are provided under the terms of the unlicense: 
 
 	This is free and unencumbered software released into the public domain.
 
