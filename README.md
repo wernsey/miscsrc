@@ -5,11 +5,11 @@ A library of miscellaneous C functions I've written over time.
 
 The modules include: A simple regular expression pattern matcher,
 * A simple hash table implementation,
-* A parser for _INI_ configuration files,
+* A parser for __INI__ configuration files,
 * A mathematical expression evaluator,
-* A function that compares the __similarity__ of two strings,
+* A function that compares the _similarity_ of two strings,
 * A generic linked list implementation with extra helper functions,
-* A set of functions to read, write and manipulate _Comma Separated Values_ (CSV) files,
+* A set of functions to read, write and manipulate __Comma Separated Values__ (CSV) files,
 * An alternative to `getopt()` called `getarg()` for platforms without _getopt()_ (meant for WIN32) and
 * A couple of utility functions.
 
