@@ -26,15 +26,16 @@
 /* Various error codes */
 #define SUCCESS		  				1
 #define FILE_CREATED  				0
-#define OUT_OF_MEMORY  				-1
-#define MISSING_END_BRACE 			-2
-#define EMPTY_SECTION  				-3
-#define EXPECTED_EQUALS 			-4
-#define EXPECTED_END_OF_STRING 		-5
-#define ER_FOPEN	 				-6
-#define BAD_SYMBOL 					-7
-#define EXPECTED_PARAMETER			-8
-#define EXPECTED_VALUE				-9
+#define NO_SUCH_FILE  				-1
+#define OUT_OF_MEMORY  				-2
+#define MISSING_END_BRACE 			-3
+#define EMPTY_SECTION  				-4
+#define EXPECTED_EQUALS 			-5
+#define EXPECTED_END_OF_STRING 		-6
+#define ER_FOPEN	 				-7
+#define BAD_SYMBOL 					-8
+#define EXPECTED_PARAMETER			-9
+#define EXPECTED_VALUE				-10
 
 const char *ini_errstr(int err)
 {
@@ -42,6 +43,7 @@ const char *ini_errstr(int err)
 	{
 		case SUCCESS : return "Success";
 		case FILE_CREATED: return "New INI object created";
+		case NO_SUCH_FILE: return "Unable to open file";
 		case OUT_OF_MEMORY: return "Out of memory";
 		case MISSING_END_BRACE: return "Missing ']' at end of section";
 		case EMPTY_SECTION: return "Empty [] for section";
@@ -244,6 +246,10 @@ struct ini_file *ini_read(const char *filename, int *err, int *line) {
 		return make_ini();
 	} else {	
 		char *text = my_readfile(filename);
+		if(!text) {
+			if(err) *err = NO_SUCH_FILE;
+			return NULL;
+		}
 		struct ini_file * ini = ini_parse(text, err, line);
 		free(text);
 		return ini;
