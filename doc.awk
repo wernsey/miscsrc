@@ -68,7 +68,7 @@ function filter(ss,        j, k1, k2, k3)
 		k1 = substr(ss, 1, j - 1);
 		k2 = substr(ss, j + 2, RLENGTH-2);
 		k3 = substr(ss, j + RLENGTH);
-		ss = k1 "<a name=\"" k2 "\">" k2 "</a>" k3
+		ss = k1 "<span id=\"" k2 "\">" k2 "</span>" k3
 	}
 	
 	# Use a ~~word to specify an anchor, eg. ~~foo gets translated to <a href="#foo">foo</a>
