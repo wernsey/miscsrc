@@ -24,6 +24,9 @@
 #	define vsnprintf _vsnprintf
 #endif
 
+/* The size of the internal buffer used by csv_setx() */
+#define CSV_SETX_BUFFER_SIZE 512
+
 /*
  * Trim whitespace at thestart and end of fields?
  * This does not apply to quoted fields

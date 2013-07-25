@@ -1,14 +1,14 @@
-/*! eval.h
+/*1 eval.h
  *# A mathematical expression evaluator.\n
  *# It uses a recursive descent parser internally.
  *#
- *-
+ *2 License
  *[
  *# Author: Werner Stoop
  *# This software is provided under the terms of the unlicense.
  *# See http://unlicense.org/ for more details.
  *]
- *-
+ *2 API
  */
 #ifndef EVAL_H
 #define EVAL_H
@@ -29,7 +29,7 @@ double eval(const char *expr, int *ep);
 	
 /*@ const char *eval_error(int err);
  *#	Returns a string describing a specific error code.
- *#	{{err}} is the value returned in eval()'s {{ep}} parameter.
+ *#	{{err}} is the value returned in {{eval()}}'s {{ep}} parameter.
  *# It returns a string describing the error.
  */
 const char *eval_error(int err);

@@ -43,6 +43,8 @@ eval.o: eval.h
 hash.o: hash.h
 ini.o: ini.h utils.h
 list.o: list.h
+simil.o: simil.h
+regex.o: regex.h
 
 # Test programs: Compile .o to executable
 test_%: test_%.o libmisc.a
@@ -60,7 +62,7 @@ test_sim.o : simil.h
 docs :
 	mkdir -p docs
 
-docs/%.html : %.h
+docs/%.html : %.h doc.awk
 	awk -f doc.awk -vtitle=$< $< > $@ 
 
 docs/readme.html: README doc.awk

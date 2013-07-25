@@ -1,4 +1,4 @@
-/*! csv.h
+/*1 csv.h
  *# A set of functions for the manipulation of RFC 4180 style
  *# Comma Separated Values (CSV) files.\n
  *#
@@ -16,7 +16,7 @@
  ** {{~~csv_free()}} deallocates the memory allocated to a {{csv_file}} when it is no longer in use.
  ** {{~~csv_errstr()}} provides text descriptions of error codes.
  *}
- *# {*NOTE*} Rows and columns in the CSV file structure are indexed from 0
+ *N Rows and columns in the CSV file structure are indexed from 0
  *# (The first row is row 0, not row 1, and the last row is row N-1).
  *#
  *# With regards to RFC4180 [1], note the following:
@@ -36,19 +36,19 @@
  *#  to the RFC, but this behaviour can be changed by defining {*TRIM_SPACES*} 
  *#  at the top of {*csv.c*} to a non-zero value.
  *}
- *@ References:
+ *2 References:
  *{
  ** [1] RFC 4180 available at http://tools.ietf.org/html/rfc4180
  ** [2] Repici, J., "HOW-TO: The Comma Separated Value (CSV) File Format", 2004,
  *#  http://www.creativyst.com/Doc/Articles/CSV/CSV01.htm
  *} 
- *=
+ *2 License
  *[
  *# Author: Werner Stoop
  *# This software is provided under the terms of the unlicense.
  *# See http://unlicense.org/ for more details.
  *]
- *=
+ *2 API
  */
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
@@ -66,7 +66,6 @@ typedef struct csv_row
 
 /*@ struct ##csv_file
  *# Structure representing a CSV file in memory.
- *-
  */
 typedef struct csv_file
 {
@@ -100,7 +99,6 @@ typedef struct csv_file
  *# grows beyond these values).\n
  *# If {{def_rows}} or {{def_cols}} is set to 0, {{CSV_DEFAULT_ROWS}} and
  *# {{CSV_DEFAULT_COLS}} will be used instead, respectively.
- *-
  */
 csv_file *csv_create(int def_rows, int def_cols);
 
@@ -108,21 +106,18 @@ csv_file *csv_create(int def_rows, int def_cols);
  *# Loads a CSV file.
  *# It returns {{NULL}} on failure, in which case {{err}} will contain the error code
  *# (see {{~~csv_errstr()}}) and {{line}} will contain ({{err}} and {{line}} may be {{NULL}}).
- *-
  */
 csv_file *csv_load(const char *filename, int *err, int *line);
 
 /*@ void ##csv_free(csv_file *csv)
  *# Deallocates memory previously allocated to a {{csv_file}} though {{~~csv_create()}}
  *# or {{~~csv_load()}}
- *-
  */
 void csv_free(csv_file *csv);
 
 /*@ int ##csv_save(csv_file *csv, const char *filename)
  *# Saves the {{csv_file}} file to a file named in {{filename}} on the disk.
  *# It returns 1 on success and an error code on failure (see {{~~csv_errstr()}}).
- *-
  */
 int csv_save(csv_file *csv, const char *filename);
 
@@ -133,7 +128,6 @@ int csv_rowcount(csv_file *csv);
 
 /*@ int ##csv_colcount(csv_file *csv, int row)
  *# Returns the number of columns in row {{row}} of {{csv}}
- *-
  */
 int csv_colcount(csv_file *csv, int row);
 
@@ -150,22 +144,15 @@ const char *csv_get(csv_file *csv, int row, int col);
  */
 int csv_set(csv_file *csv, int row, int col, const char *value);
 
-/*@ CSV_SETX_BUFFER_SIZE
- *# Determines the size of the internal buffer used by csv_setx()
- */
-#define CSV_SETX_BUFFER_SIZE 100
-
 /*@ int ##csv_setx(csv_file *csv, int row, int col, const char *fmt, ...)
  *# Sets the cell at [{{row}},{{col}}] of {{csv}} to a formatted string.\n
- *# The parameter {{fmt}} works like printf(), and uses the same escape sequences
- *# (it uses vsnprintf() internally).
- *-
+ *# The parameter {{fmt}} works like {{printf()}}, and uses the same escape sequences
+ *# (it uses {{vsnprintf()}} internally).
  */
 int csv_setx(csv_file *csv, int row, int col, const char *fmt, ...);
 
 /*@ const char *##csv_errstr(int err)
  *# Returns a textual description of the error code {{err}}
- *-
  */
 const char *csv_errstr(int err);
 

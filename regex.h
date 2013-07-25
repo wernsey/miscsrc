@@ -1,4 +1,4 @@
-/*! regex.h
+/*1 regex.h
  *#	This is a regular expression evaluator based on code from the article
  *#	"Regular Expressions: Languages, algorithms, and software"
  *#	By Brian W. Kernighan and Rob Pike in the April 1999 issue of
@@ -6,13 +6,14 @@
  *#
  *#	I've found the article online at
  *#	http://www.ddj.com/dept/architect/184410904
- *-
+ *#
+ *2 License
  *[
  *# Author: Werner Stoop
  *# This software is provided under the terms of the unlicense.
  *# See http://unlicense.org/ for more details.
  *]
- *-
+ *2 Usage
  *{
  ** {{~~rx_match()}} is used to match text to a pattern. 
  ** {{~~rx_search()}} is used to find the position of text matching a pattern
@@ -22,7 +23,7 @@
  ** {{~~rx_gsub()}} is used to substitute all pieces of the text matching a regex 
  *#    with some other text. 
  *}
- *-
+ *2 Syntax
  *# The evaluator implements only a subset of the usual regular expression
  *# language.
  *{
@@ -56,7 +57,7 @@
  ** Grouping and submatch extraction '(abc)'
  **	The '{m,n}' operator
  *}
- *-
+ *2 API
  */
 
 #ifndef REGEX_H
@@ -71,7 +72,6 @@ extern "C"
  *# Checks whether the text {{text}} contains the regular expression {{re}}.\n
  *# It returns non-zero if the regular expression {{re}} was found in {{text}},
  *#		zero otherwise
- *-
  */
   int rx_match (const char *text, const char *re);
 
@@ -84,8 +84,7 @@ extern "C"
  *# 	that matched {{re}} and {{end}} will contain the address of the last 
  *# 	character in {{text}} that matched {{re}}.\n
  *# It returns non-zero if the regular expression {{re}} was found in {{text}},
- *# 	zero otherwise
- *-
+ *# 	zero otherwise.
  */
   int rx_search (const char *text, const char *re, const char **beg,
                  const char **end);
@@ -99,9 +98,8 @@ extern "C"
  *# Use a {{'/'}} to escape the {{'&'}} (eg {{'/&'}}) and use a {{'//'}} to have a single
  *# {{'/'}} ({{'/'}} was chosen to avoid C's use of the {{'\'}} causing confusion).\n
  *# For example {{rx_sub("#foooo#", "fo+", "// /&")}} will return {{"#/ &#"}}\n
- *# It returns the result that should be free()'d afterwards.
- *# 	It may return {{NULL}} on a malloc() failure
- *-
+ *# It returns the result that should be {{free()}}'d afterwards.
+ *# 	It may return {{NULL}} on a {{malloc()}} failure.
  */
   char *rx_sub (const char *text, const char *re, const char *sub);
 
@@ -112,9 +110,9 @@ extern "C"
  *# For example, {{rx_gsub("#foooo#", "fo+", "|&|")}} will return {{"#|foooo|#"}}.\n
  *# Use a {{'/'}} to escape the {{'&'}} (eg {{'/&'}}) and use a {{'//'}} to have a single
  *# {{'/'}} ({{'/'}} was chosen to avoid C's use of the {{'\'}} causing confusion).\n
- *# For example {{match_sub("#foooo#", "fo+", "// /&")}} will return {{"#/ &#"}}\n
- *# It returns the result that should be free()'d afterwards.
- *# 	It may return {{NULL}} on a malloc() failure
+ *# For example {{match_sub("#foooo#", "fo+", "// /&")}} will return {{"#/ &#"}}.\n
+ *# It returns the result that should be {{free()}}'d afterwards.
+ *# 	It may return {{NULL}} on a {{malloc()}} failure.
  */
   char *rx_gsub (const char *text, const char *re, const char *sub);
 

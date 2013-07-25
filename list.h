@@ -1,4 +1,4 @@
-/*! list.h
+/*1 list.h
  *# A generic linked-list implementation.\n
  *#
  *# It aims to be a set of comprehensive, reentrant and portable 
@@ -30,13 +30,13 @@
  ** {{~~list_remove()}} is used to delete specific  It is 
  *#   an O(n) algorithm unfortunately.
  *}
- *-
+ *2 License
  *[
  *# Author: Werner Stoop
  *# This software is provided under the terms of the unlicense.
  *# See http://unlicense.org/ for more details.
  *]
- *-
+ *2 API
  */
 #ifndef LIST_H
 #define LIST_H
@@ -60,11 +60,10 @@ typedef struct list_element {
 
 /*@ struct ##link_list
  *# Structure containing a linked list.\n
- *# Create it with list_create() and destroy it with list_destroy().\n
+ *# Create it with {{~~list_create()}} and destroy it with {{~~list_destroy()}}.\n
  *# It has a pointer {{first}} that points to the first {{list_element}}
  *# in the list, and a pointer {{last}} that points to the last
  *# {{~~list_element}} in the list.
- *-
  */
 typedef struct link_list {
 	list_element *first, *last;
@@ -72,10 +71,9 @@ typedef struct link_list {
 
 /*@ link_list *##list_create()
  *# Creates a linked list structure.\n
- *# It returns a newly allocated link_list structure, or {{NULL}}
- *# if malloc() failed.\n
- *# Deallocate the returned structure with ~~list_destroy()
- *-
+ *# It returns a newly allocated {{~~link_list}} structure, or {{NULL}}
+ *# if {{malloc()}} failed.\n
+ *# Deallocate the returned structure with {{~~list_destroy()}}
  */
 link_list *list_create();
 
@@ -86,7 +84,7 @@ int list_isempty(link_list *list);
 
 /*@ int ##list_count(link_list *list)
  *# Returns the number of elements in {{list}}.\n
- *# This is an O(n) operation at the moment.
+ *N This is an O(n) operation at the moment.
  */
 int list_count(link_list *list);
 
@@ -102,14 +100,13 @@ typedef void (*list_dtor)(void *data);
  *# Destroys the linked list.\n
  *# The data stored at each node will be passed to the function {{dtor}}
  *# to be deallocated.
- *-
  */
 void list_destroy(link_list *list, list_dtor dtor);
 
 /*@ list_element *##list_append(link_list *list, void *data);
  *# Adds an element to the end of the list.\n
  *# It returns a pointer to the inserted element, or {{NULL}} if
- *# either data is {{NULL}} or malloc() failed.
+ *# either data is {{NULL}} or {{malloc()}} failed.
  */
 list_element *list_append(link_list *list, void *data);
 
@@ -122,14 +119,13 @@ list_element *list_append(link_list *list, void *data);
 /*@ list_element *##list_prepend(link_list *list, void *data);
  *# Adds an element to the front of the list.\n
  *# It returns a pointer to the inserted element, or {{NULL}} if
- *# either data is {{NULL}} or malloc() failed.
+ *# either data is {{NULL}} or {{malloc()}} failed.
  */
 list_element *list_prepend(link_list *list, void *data);
 
 /*@ void *##list_remove_element(link_list *list, list_element *el)
  *#	Removes the element pointed to by {{el}} from the {{list}} and returns
  *# its {{data}} pointer for manual cleanup.
- *-
  */
 void *list_remove_element(link_list *list, list_element *el);
 
@@ -152,7 +148,6 @@ void *list_pop_back(link_list *list);
  *# data pointer.\n
  *# It may return {{NULL}} if the list is empty.
  *# It is defined as a macro around {{~~list_pop_back()}}
- *-
  */
 #define list_pop(list) (list_pop_back((list)))
 
@@ -176,7 +171,6 @@ int list_iterate(link_list *list, list_iter iter);
  *# {{iter}} for each node.\n
  *# It returns 1 if it ran through all the nodes successfully, or
  *# 0 if {{iter}} returned 0 at any of the nodes.
- *-
  */
 int list_iterate_reverse(link_list *list, list_iter iter);
 
@@ -220,11 +214,10 @@ int list_strcmp(void *, void *);
 int list_stricmp(void *, void *);
 
 /*@ #define ##list_for_each(element, in_list)
- *# Macro that wraps around a {{{for}}} loop to iterate over each element
+ *# Macro that wraps around a {{for}} loop to iterate over each element
  *# in a list:\n
- *# {{{for(element = in_list->first; element; element = element->next)}}}\n
- *# Use like so:
- *# {{{list_for_each(element, my_list) { Blob *b = element->data; ... } }}}
+ *# {{for(element = in_list->first; element; element = element->next)}}\n
+ *X {{{list_for_each(element, my_list) { Blob *b = element->data; ... } }}}
  */
 #define list_for_each(element, in_list) for(element = in_list->first; element; element = element->next)
 

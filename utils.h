@@ -1,15 +1,15 @@
-/*! utils.h
+/*1 utils.h
  *# A variety of utility functions.
  *# 
  *# Some of the functions are duplicates of well known C functions that are not 
  *# standard.
- *-
+ *2 License
  *[
  *# Author: Werner Stoop
  *# This software is provided under the terms of the unlicense.
  *# See http://unlicense.org/ for more details.
  *]
- *-
+ *2 API
  */
 
 /*@ MY_MIN(a,b)

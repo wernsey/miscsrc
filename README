@@ -1,4 +1,4 @@
-/*! libmisc 
+/*1 libmisc 
  *#	A library of miscellaneous C functions I've written over time.
  *#
  *# Each of these modules is a combination of C source and header files.
@@ -27,7 +27,7 @@
  *# HTML documentation is created through the {{doc.awk}} Awk script, hence the
  *# funny glyphs in the header and {{README}} files.
  *=
- *@ License: 
+ *2 License: 
  *# Author: Werner Stoop.\n
  *# These sources are provided under the terms of the unlicense: 
  *[
