@@ -3,16 +3,18 @@ BEGIN {
 	print "<!DOCTYPE html>\n<html>\n<head>\n<title>" title "</title>";
 	print "<style><!--";
 	print "body {font-family:Arial, Verdana, Helvetica, sans-serif;margin-left:20px;margin-right:20px;}";
-	print "h1 {color:#57915c;border:none;padding:5px;}";
-	print "h2 {color:#57915c;border:none;padding:5px;}";
-	print "h3 {color:#91c191;border:none;padding:5px;}";
-	print "a:link {color: #57915c;}";
-	print "a:visited {color: black;}";
-	print "a:active {color: black;}";
-	print "code,strong {color:#57915c}";
-	print "pre {color:#57915c;background:#d4ffd4;border:none;border-radius:5px;padding:7px;margin-left:15px;margin-right:15px;}";
-	print "div.title {color:#57915c;font-weight:bold;background:#b8e0b8;border:none;border-radius:5px;padding:10px;margin:10px 5px;font-family:monospace;}";
-	print "div.box {background:#f0fff0;border:none;border-radius:5px;margin:10px 2px;padding:1px;}";
+	print "h1 {color:#575c91;border:none;padding:5px;}";
+	print "h2 {color:#575c91;border:none;padding:5px;}";
+	print "h3 {color:#9191c1;border:none;padding:5px;}";
+	print "a{padding:2px;border-radius:2px;}";
+	print "a:link {color: #575c91;}";
+	print "a:visited {color: #575c91;text-decoration:none;}";
+	print "a:active {background:#575c91;color:#f0f0ff;}";
+	print "a:hover {background:#b8b8e0;color:#f0f0ff;}";
+	print "code,strong {color:#575c91}";
+	print "pre {color:#575c91;background:#d4d4ff;border:none;border-radius:5px;padding:7px;margin-left:15px;margin-right:15px;}";
+	print "div.title {color:#575c91;font-weight:bold;background:#b8b8e0;border:none;border-radius:5px;padding:10px;margin:10px 5px;font-family:monospace;}";
+	print "div.box {background:#f0f0ff;border:none;border-radius:5px;margin:10px 2px;padding:1px;}";
 	print "div.inner-box {border:none;margin:5px;padding:3px;}";
 	print "--></style>";
 	print "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">";
@@ -63,7 +65,7 @@ function filter(ss,        j, k1, k2, k3)
 	# Hyperlinks (excuse my primitive regex)
 	gsub(/http:\/\/[a-zA-Z0-9._\/\-%~]+/, "<a href=\"&\">&</a>", ss);
 	
-	# Use a ##word to specify an anchor, eg. ##foo gets translated to <a name="foo">foo</a>
+	# Use a ##word to specify an anchor, eg. ##foo gets translated to <span id="foo">foo</a>
 	while(j = match(ss, /##[A-Za-z0-9_]+/)) {
 		k1 = substr(ss, 1, j - 1);
 		k2 = substr(ss, j + 2, RLENGTH-2);
