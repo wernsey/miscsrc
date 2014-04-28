@@ -257,9 +257,9 @@ ht_free (struct hash_tbl *h, clear_all_dtor dtor)
         while (e)
           {
             h->buckets[i] = e->next;
-            free (e->key);
             if (dtor)
-              dtor (e->value);
+              dtor (e->key, e->value);
+            free (e->key);
             free (e);
             e = h->buckets[i];
           }

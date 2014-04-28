@@ -33,7 +33,7 @@ extern "C"
  *# If, for example, the hash table stores {{FILE}} handles, this function
  *# can be used to close all open files referenced in the hash table.
  */
-  typedef void (*clear_all_dtor) (void *);
+  typedef void (*clear_all_dtor) (const char *key, void *val);
 
 /*@ struct hash_el
  *# Element stored within the hash table 
