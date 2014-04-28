@@ -1,0 +1,6 @@
+*.o
+*.a
+docs/*.html
+test/*.exe
+test/*.ini
+test/*.db
