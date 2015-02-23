@@ -26,7 +26,7 @@ extern "C"
 {
 #endif
 
-/*@ typedef void (*clear_all_dtor) (void *)
+/*@ typedef void (*clear_all_dtor) (const char *key, void *val)
  *# A pointer to a function that can clean up values in the hash table.\n
  *# Clean up implies freeing memory allocated to the hash table or the
  *# freeing of other resources allocated to the elements.\n
