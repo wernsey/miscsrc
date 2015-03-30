@@ -3,7 +3,7 @@ CFLAGS=-c -Wall
 LDFLAGS=
 
 # Add your source files here:
-LIB_SOURCES=csv.c eval.c getarg.c hash.c ini.c list.c regex.c simil.c utils.c gc.c
+LIB_SOURCES=csv.c eval.c getarg.c hash.c ini.c list.c regex.c simil.c utils.c gc.c refcnt.c
 LIB_OBJECTS=$(LIB_SOURCES:.c=.o)
 LIB=libmisc.a
 

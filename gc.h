@@ -21,6 +21,13 @@
  *}
  *# {{gc_collect()}} is called automatically from {{gc_alloc()}} at regular 
  *# intervals.
+ *2 License
+ *[
+ *# Author: Werner Stoop
+ *# This is free and unencumbered software released into the public domain.
+ *# http://unlicense.org/
+ *]
+ *2 API
  */
  
 /*2 Types

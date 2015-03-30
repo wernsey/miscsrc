@@ -3,7 +3,8 @@ Miscsrc
 
 A library of miscellaneous C functions I've written over time.
 
-The modules include: A simple regular expression pattern matcher,
+The modules include: 
+* A simple regular expression pattern matcher,
 * A simple hash table implementation,
 * A parser for __INI__ configuration files,
 * A mathematical expression evaluator,
@@ -11,9 +12,12 @@ The modules include: A simple regular expression pattern matcher,
 * A generic linked list implementation with extra helper functions,
 * A set of functions to read, write and manipulate __Comma Separated Values__ (CSV) files,
 * A mark-and-sweep garbage collector,
+* A reference counting garbage collector,
 * An alternative to `getopt()` called `getarg()` for platforms without _getopt()_ (meant for WIN32) and
 * A couple of utility functions.
 
+It is a collection of C code that I've implemented over the course of several years
+and used, tested and reused in several of my hobby projects.
 
 -------------------------------------------------------------------------------
 These sources are provided under the terms of the unlicense: 
@@ -42,4 +46,3 @@ These sources are provided under the terms of the unlicense:
 	OTHER DEALINGS IN THE SOFTWARE.
 
 	For more information, please refer to <http://unlicense.org/>
-

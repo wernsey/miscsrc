@@ -10,15 +10,15 @@
  ** {*simil*} - Compares the {/similarity/} of two strings.
  ** {*list*} - A generic linked list implementation with extra helper functions.
  ** {*csv*} - A set of functions to read, write and manipulate Comma Separated Values (CSV) files.
+ ** {*gc*} - A mark-and-sweep garbage collector.
+ ** {*refcnt*} - A reference counting garbage collector.
  ** {*getarg*} - An alternative to {{getopt()}} for platforms without it (like WIN32). 
  ** {*utils*} - A couple of utility functions.
  *}
- *=
  *# These modules have been written to conform to ANSI C and to be platform 
  *# independent. If you have any problems compiling them with a standard C
  *# compiler, please feel free to contact the author.
  *#
- *=
  *# Effort has been made to keep the modules independent of each other (with
  *# some minor exceptions), so that the individual files can be copied to other 
  *# projects if you don't want to link your project to the {*libmisc*} library.
