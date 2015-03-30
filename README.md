@@ -10,6 +10,7 @@ The modules include: A simple regular expression pattern matcher,
 * A function that compares the _similarity_ of two strings,
 * A generic linked list implementation with extra helper functions,
 * A set of functions to read, write and manipulate __Comma Separated Values__ (CSV) files,
+* A mark-and-sweep garbage collector,
 * An alternative to `getopt()` called `getarg()` for platforms without _getopt()_ (meant for WIN32) and
 * A couple of utility functions.
 
