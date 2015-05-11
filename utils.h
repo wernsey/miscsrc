@@ -51,6 +51,11 @@ char *my_strlower (char *p);
  */
 char *my_strupper (char *p);
 
+/*@ char *my_strtok_r(char *str, const char *delim, char **saveptr)
+ *# Works the same as {{strtok_r(3)}} for platforms which lack it.
+ */
+char *my_strtok_r(char *str, const char *delim, char **saveptr);
+
 /*@ char *my_readfile (const char *fn)
  *# Reads an entire file identified by {{fn}} into a dynamically allocated memory buffer.\n
  *# The returned buffer needs to be {{free()}}d afterwards.\n

@@ -13,15 +13,13 @@
 
 /* Case insensitive strcmp()
  */ 
-int my_stricmp(const char *p, const char *q) 
-{ 
+int my_stricmp(const char *p, const char *q) { 
 	for(;*p && tolower(*p) == tolower(*q); p++, q++);
 	return tolower(*p) - tolower(*q);
 } 
 
 /* strdup() is not ANSI C */
-char *my_strdup(const char *s)
-{
+char *my_strdup(const char *s) {
 	char *a;
 	size_t len = strlen(s);
 	a = malloc(len + 1);
@@ -31,8 +29,7 @@ char *my_strdup(const char *s)
 }
 
 /* converts a string to lowercase */
-char *my_strlower (char *p)
-{
+char *my_strlower (char *p) {
   char *s;
   for (s = p; s[0]; s++)
     s[0] = tolower (s[0]);
@@ -50,11 +47,26 @@ char *my_strupper (char *p)
   return p;
 }
 
+char *my_strtok_r(char *str, const char *delim, char **saveptr) {
+	if(!str)
+		str = *saveptr;
+	if(!str[0]) {
+		*saveptr = str;
+		return NULL;	
+	}
+	char *s = strpbrk(str, delim);
+	if(s) {
+		s[0] = '\0';
+		*saveptr = s + 1;
+	} else 
+		for(*saveptr = str; (*saveptr)[0]; (*saveptr)++);
+	return str;
+}
+
 /* Reads an entire file into a dynamically allocated memory buffer.
  * The returned buffer needs to be free()d afterwards
  */
-char *my_readfile(const char *fname)
-{
+char *my_readfile(const char *fname) {
 	FILE *f;
 	long len,r;
 	char *str;
@@ -70,8 +82,7 @@ char *my_readfile(const char *fname)
 		return NULL;	
 	r = fread(str, 1, len, f);
 	
-	if(r != len)
-	{
+	if(r != len) {
 		free(str);
 		return NULL;
 	}
