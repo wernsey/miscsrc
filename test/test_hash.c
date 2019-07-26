@@ -21,42 +21,38 @@ show (struct hash_tbl *h)
  * the hash table, although it requires two lookups
  * per key
  */
-void
-iterate (struct hash_tbl *h)
-{
+static void iterate (struct hash_tbl *h) {
   const char *key = NULL;
 
   while ((key = ht_next (h, key)) != NULL)
     printf ("%s %s\n", key, (char *) ht_find (h, key));
 }
 
-int
-printfun (const char *key, void *value, void *data)
-{
+static int printfun (const char *key, void *value, void *data) {
   printf ("%s -> %s\n", key, (char *) value);
   return 1;
 }
 
-int
-main (int argc, char *argv[])
-{
+static void dtor(const char *key, void *val) {
+  free(val);
+}
+
+int main (int argc, char *argv[]) {
   struct hash_tbl *h;
   char cmd[20], key[20], data[20], *res;
 
   h = ht_create (8);            /* Smallish size for test purposes */
-  if (!h)
-    {
-      fprintf (stderr, "error: ht_create() failed\n");
-      return 1;
-    }
+  if (!h) {
+    fprintf(stderr, "error: ht_create() failed\n");
+    return 1;
+  }
 
-  while (1)
-    {
+  while (1) {
       printf (">");
       fflush (stdout);
 
       scanf ("%s", cmd);
-      if (!strcmp (cmd, "end") || !strcmp (cmd, "quit"))
+      if (!strcmp (cmd, "end") || !strcmp (cmd, "quit") || !strcmp (cmd, "exit"))
         break;
       else if (!strcmp (cmd, "add"))
         {
@@ -119,6 +115,6 @@ main (int argc, char *argv[])
       fflush (stdout);
     }
 
-  ht_free (h, free);
+  ht_free (h, dtor);
   return 0;
 }
