@@ -1,15 +1,15 @@
 /**
  * # getarg.h: 
- *	Replacement for the POSIX {{getopt()}} function for processing
- *	command-line options. I use it for compiling programs that require command-
- *	line arguments under Windows, but my goal is to have it portable to use 
- *	in programs compiled on other platforms.
+ * Replacement for the POSIX `getopt()` function for processing
+ * command-line options. I use it for compiling programs that require command-
+ * line arguments under Windows, but my goal is to have it portable to use 
+ * in programs compiled on other platforms.
  *
- *	Although I've consulted the relavant {{getopt()}} manual pages, this 
- *	implementation is entirely my own.
+ * Although I've consulted the relavant `getopt()` manual pages, this 
+ * implementation is entirely my own.
  *
- *	Use it as you would use {{getopt()}}, but replace all the "opt" prefixes
- *	with "arg"
+ * Use it as you would use `getopt()`, but replace all the "opt" prefixes
+ * with "arg"
  *
  * ### License
  *
