@@ -60,14 +60,14 @@ test_list.o : list.h utils.h
 test_rx.o : regex.h
 test_sim.o : simil.h
 
-docs :
+docs:
 	mkdir -p docs
 
-docs/%.html : %.h doc.awk
-	awk -f doc.awk -vtitle=$< $< > $@ 
+docs/%.html: %.h d.awk
+	awk -f d.awk -vTitle=$< $< > $@
 
-docs/readme.html: README doc.awk
-	awk -f doc.awk -vtitle=$< $< > $@ 
+docs/readme.html: README.md d.awk
+	awk -f d.awk -v Clean=1 -vTitle=$< $< > $@
 	
 .PHONY : clean 
 
