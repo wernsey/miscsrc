@@ -21,14 +21,14 @@ extern "C" {
 
 /**
  * #### `double eval(const char *expr, int *ep)`
- *	Evaluates a mathematical expression.
+ * Evaluates a mathematical expression.
  * 
  * * `expr` is the expression to valuate.
  * * `ep` is a pointer to an integer that will contain an error code if
  *		any errors were encountered during parsing. `ep` will be 0 if
  *		the evaluation was successful.
  *
- *	It returns the result of evaluating the expression.
+ * It returns the result of evaluating the expression.
  */
 double eval(const char *expr, int *ep);
 	
