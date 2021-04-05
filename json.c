@@ -4,6 +4,10 @@
  * https://www.json.org/json-en.html
  * https://tools.ietf.org/id/draft-ietf-json-rfc4627bis-09.html
  *
+ * See `json.h` for more info
+ *
+ * This is free and unencumbered software released into the public domain.
+ * http://unlicense.org/
  *
  * TODO: I came across this test suite for JSON parsers:
  * [Parsing JSON is a Minefield](http://seriot.ch/parsing_json.php);

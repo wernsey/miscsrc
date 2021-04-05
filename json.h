@@ -3,6 +3,12 @@
  *
  * An over-engineered JSON parser and serializer.
  *
+ * ## License
+ *
+ *     Author: Werner Stoop
+ *     This software is provided under the terms of the unlicense.
+ *     See http://unlicense.org/ for more details.
+ *
  * ## References
  *
  * * https://www.json.org/json-en.html
@@ -11,6 +17,7 @@
  *   * https://unicodebook.readthedocs.io/index.html
  *   * https://en.wikipedia.org/wiki/UTF-8
  *   * https://en.wikipedia.org/wiki/UTF-16
+ *
  */
 
 #ifndef JSON_H
