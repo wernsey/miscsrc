@@ -134,97 +134,134 @@ char *(*json_readfile)(const char *fname) = _json_readfile;
 
 #define HASH_SIZE   8
 
-struct HashElement {
+typedef struct HashElement {
     char *name;
     JSON *value;
-    struct HashElement *next;
-};
-
-typedef struct HashElement HashElement;
+} HashElement;
 
 struct HashTable {
-    HashElement *table[HASH_SIZE];
+    unsigned int allocated, count;
+    HashElement *table;
 };
 
 static HashTable *ht_create() {
-    HashTable *ht = calloc(1, sizeof *ht);
+    HashTable *ht = malloc(sizeof *ht);
+    if(!ht)
+        return NULL;
+    ht->allocated = HASH_SIZE;
+    ht->table = calloc(ht->allocated, sizeof *ht->table);
+    if(!ht->table) {
+        free(ht);
+        return NULL;
+    }
+    ht->count = 0;
     return ht;
 }
 
 static void ht_destroy(HashTable *ht) {
     int i;
-    for(i = 0; i < HASH_SIZE; i++) {
-        while(ht->table[i]) {
-            HashElement* v = ht->table[i];
-            ht->table[i] = v->next;
+    for(i = 0; i < ht->allocated; i++) {
+        if(ht->table[i].name) {
+            HashElement* v = &ht->table[i];
             str_release(v->name);
             json_release(v->value);
-            free(v);
         }
     }
+    free(ht->table);
     free(ht);
 }
 
+/*
+FNV-1a hash, 32-bit version
+https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
+*/
 static unsigned int hash(const char *s) {
-    /* DJB hash */
-    unsigned int h = 5381;
-    for(;s[0];s++)
-        h = ((h << 5) + h) + s[0];
+    unsigned int h = 0x811c9dc5;
+    for(;s[0];s++) {
+        h ^= (unsigned char)s[0];
+        h *= 0x01000193;
+    }
     return h;
 }
 
-static JSON *ht_put(HashTable *ht, char *name, JSON *j) {
-    unsigned int h = hash(name) & (HASH_SIZE - 1);
-    HashElement *v;
-    for(v = ht->table[h]; v; v = v->next)
-        if(!strcmp(v->name, name)) {
-            str_release(v->name);
-            json_release(v->value);
-            v->name = name;
-            v->value = j;
-            return j;
-        }
+static HashElement *find_entry(HashElement *elements, unsigned int mask, const char *name) {
+    unsigned int h = hash(name) & mask;
+    for(;;) {
+        if(!elements[h].name || !strcmp(elements[h].name, name))
+            return &elements[h];
+        h = (h + 1) & mask;
+    }
+    return NULL;
+}
 
-    v = malloc(sizeof *v);
-    v->name = name;
-    v->next = ht->table[h];
-    v->value = j;
-    ht->table[h] = v;
+static JSON *ht_put(HashTable *ht, char *name, JSON *j) {
+    assert(ht);
+
+    HashElement *f = find_entry(ht->table, ht->allocated - 1, name);
+    if(f->name) {
+        /* Replacing an existing entry */
+        str_release(f->name);
+        json_release(f->value);
+    } else {
+        /* new entry */
+        if(ht->count >= ht->allocated * 3 / 4) {
+            /* grow the table */
+            int new_size = (ht->allocated) << 1;
+
+            HashElement *new_table = calloc(new_size, sizeof *new_table);
+            if(!new_table)
+                return NULL;
+            unsigned int i;
+            for(i = 0; i <= ht->allocated - 1; i++) {
+                HashElement *from = &ht->table[i];
+                if(from->name) {
+                    HashElement *to = find_entry(new_table, new_size-1, from->name);
+                    to->name = from->name;
+                    to->value = from->value;
+                }
+            }
+            free(ht->table);
+
+            ht->table = new_table;
+            ht->allocated = new_size;
+
+            f = find_entry(ht->table, ht->allocated - 1, name);
+        }
+        ht->count++;
+    }
+    f->name = name;
+    f->value = j;
 
     return j;
 }
 
 static JSON *ht_get(HashTable *ht, const char *name) {
-    unsigned int h = hash(name) & (HASH_SIZE - 1);
-    HashElement *v;
-    for(v = ht->table[h]; v; v = v->next)
-        if(!strcmp(v->name, name))
-            return v->value;
+    HashElement *v = find_entry(ht->table, ht->allocated - 1, name);
+    if(v->name)
+        return v->value;
     return NULL;
 }
 
 static const char *ht_next(HashTable *ht, const char *name) {
-    unsigned int h;
-    HashElement *e;
-    if(!name) {
-        for(h = 0; h < HASH_SIZE; h++) {
-            if((e = ht->table[h]))
-                return e->name;
+    unsigned int h = 0;
+    assert(ht->count < ht->allocated);
+    if(name) {
+        int oh;
+        oh = hash(name) & (ht->allocated - 1);
+        h = oh;
+        while(strcmp(ht->table[h].name, name)) {
+            if(!ht->table[h].name)
+                return NULL;
+            h = (h + 1) & (ht->allocated - 1);
         }
-    } else {
-        h = hash(name) & (HASH_SIZE - 1);
-        for(e = ht->table[h]; e; e = e->next) {
-            if(!strcmp(e->name, name)) {
-                if(e->next)
-                    return e->next->name;
-                for(h++; h < HASH_SIZE; h++) {
-                    if(ht->table[h])
-                        return ht->table[h]->name;
-                }
-            }
-        }
+        if(++h >= ht->allocated)
+            return NULL;
     }
-    return NULL;
+    while(!ht->table[h].name) {
+        if(++h >= ht->allocated)
+            return NULL;
+    }
+    return ht->table[h].name;
 }
 
 /* =============================================================
@@ -1149,6 +1186,11 @@ static int serialize_string(Emitter *e, const char *str) {
 static int serialize_value(Emitter *e, JSON *j, int pretty, int indent) {
     char buffer[32];
     int x;
+    if(!j) {
+        emit_text(e, "null");
+        return 1;
+    }
+
     switch(j->type) {
 		case j_string: {
 			if(!serialize_string(e, j->value.string))

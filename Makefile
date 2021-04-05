@@ -1,6 +1,6 @@
 CC=gcc
-CFLAGS=-c -Wall
-LDFLAGS=
+CFLAGS= -c -Wall
+LDFLAGS= -lm
 
 # Add your source files here:
 LIB_SOURCES=csv.c eval.c getarg.c hash.c ini.c list.c regex.c simil.c utils.c gc.c refcnt.c json.c
@@ -61,7 +61,7 @@ $(TEST_OBJECTS):
 	$(CC) $(CFLAGS) -o $@ $<
 
 $(TESTS):
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CC) -o $@ $^ $(LDFLAGS)
 
 # Test program dependencies
 test/test_arg.o: test/test_arg.c getarg.h
