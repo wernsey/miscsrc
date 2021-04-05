@@ -16,17 +16,18 @@ int main(int argc, char *argv[])
 {
 	link_list *list;
 	char cmd[21], arg[41];
-	
+
 	printf("Type 'help' for help\n");
-	
+
 	list = list_create();
-	
+
 	for(;;)
 	{
 		printf(">>");
 		fflush(stdout);
-		
-		scanf("%10s", cmd);		
+
+		if(scanf("%10s", cmd) != 1) continue;
+
 		if(!strcmp(cmd, "quit")) break;
 		else if(!strcmp(cmd, "help"))
 		{
@@ -39,20 +40,20 @@ int main(int argc, char *argv[])
 			printf("find <item> - Searches for an item in the list.\n");
 			printf("findi <item> - Case insensitive find.\n");
 			printf("rem <item> - removes an item in the list.\n");
-			printf("remi <item> - Case insensitive remove.\n");		
-			printf("popf - Pops the front of the list.\n");		
+			printf("remi <item> - Case insensitive remove.\n");
+			printf("popf - Pops the front of the list.\n");
 			printf("popb - Pops the back of the list.\n");
 			printf("empty - Determines whether the list is empty\n");
-			printf("count - Counts the number of elements in the list\n");			
+			printf("count - Counts the number of elements in the list\n");
 		}
 		else if(!strcmp(cmd, "add"))
 		{
-			scanf("%40s", arg);
+			if(scanf("%40s", arg) != 1) continue;
 			list_append(list, my_strdup(arg));
 		}
 		else if(!strcmp(cmd, "addf"))
 		{
-			scanf("%40s", arg);
+			if(scanf("%40s", arg) != 1) continue;
 			list_prepend(list, my_strdup(arg));
 		}
 		else if(!strcmp(cmd, "show"))
@@ -65,7 +66,7 @@ int main(int argc, char *argv[])
 		}
 		else if(!strcmp(cmd, "find"))
 		{
-			scanf("%40s", arg);
+			if(scanf("%40s", arg) != 1) continue;
 			if(list_find(list, arg, list_strcmp))
 				printf("%s is in the list\n", arg);
 			else
@@ -73,7 +74,7 @@ int main(int argc, char *argv[])
 		}
 		else if(!strcmp(cmd, "findi"))
 		{
-			scanf("%40s", arg);
+			if(scanf("%40s", arg) != 1) continue;
 			if(list_find(list, arg, list_stricmp))
 				printf("%s is in the list\n", arg);
 			else
@@ -82,14 +83,14 @@ int main(int argc, char *argv[])
 		else if(!strcmp(cmd, "rem"))
 		{
 			char *c;
-			scanf("%40s", arg);
+			if(scanf("%40s", arg) != 1) continue;
 			c = list_remove(list, arg, list_strcmp);
 			free(c);
 		}
 		else if(!strcmp(cmd, "remi"))
 		{
 			char *c;
-			scanf("%40s", arg);
+			if(scanf("%40s", arg) != 1) continue;
 			c = list_remove(list, arg, list_stricmp);
 			free(c);
 		}
@@ -109,20 +110,20 @@ int main(int argc, char *argv[])
 		}
 		else if(!strcmp(cmd, "empty"))
 		{
-			printf("List is %s\n", list_isempty(list)?"empty":"not empty");			
+			printf("List is %s\n", list_isempty(list)?"empty":"not empty");
 		}
 		else if(!strcmp(cmd, "count"))
 		{
-			printf("List has %d items\n", list_count(list));			
-		}		
+			printf("List has %d items\n", list_count(list));
+		}
 		else
 		{
 			fprintf(stderr, "Unknown command %s\n", cmd);
 			fflush(stdout);
 		}
 	}
-	
+
 	list_destroy(list, free);
-	
+
 	return 0;
 }

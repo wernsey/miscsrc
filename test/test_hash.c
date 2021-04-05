@@ -51,7 +51,8 @@ int main (int argc, char *argv[]) {
       printf (">");
       fflush (stdout);
 
-      scanf ("%s", cmd);
+      if(scanf ("%s", cmd) != 1) continue;
+
       if (!strcmp (cmd, "end") || !strcmp (cmd, "quit") || !strcmp (cmd, "exit"))
         break;
       else if (!strcmp (cmd, "add"))
@@ -59,7 +60,7 @@ int main (int argc, char *argv[]) {
           char *d;
           size_t len;
 
-          scanf ("%s %s", key, data);
+          if(scanf ("%s %s", key, data) != 2) continue;
 
           len = strlen (data);
           d = malloc (len + 1);
@@ -73,7 +74,7 @@ int main (int argc, char *argv[]) {
         }
       else if (!strcmp (cmd, "find"))
         {
-          scanf ("%s", key);
+          if(scanf ("%s", key) != 1) continue;
           res = ht_find (h, key);
           if (res)
             printf ("%s ~> %s\n", key, res);
@@ -83,7 +84,7 @@ int main (int argc, char *argv[]) {
       else if (!strcmp (cmd, "next"))
         {
           const char *next;
-          scanf ("%s", key);
+          if(scanf ("%s", key) != 1) continue;
           next = ht_next (h, key);
           if (next)
             printf ("%s => %s %s\n", key, next, (char *) ht_find (h, next));
@@ -92,7 +93,7 @@ int main (int argc, char *argv[]) {
         }
       else if (!strcmp (cmd, "delete"))
         {
-          scanf ("%s", key);
+          if(scanf ("%s", key)) continue;
           res = ht_delete (h, key);
           if (res)
             {

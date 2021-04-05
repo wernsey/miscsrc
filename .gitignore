@@ -5,3 +5,14 @@ test/*.exe
 test/*.ini
 test/*.db
 .gdbinit
+
+# Linux test executables
+test/test_arg
+test/test_csv
+test/test_eval
+test/test_hash
+test/test_ini
+test/test_json
+test/test_list
+test/test_rx
+test/test_sim
