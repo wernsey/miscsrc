@@ -1,0 +1,21 @@
+{
+    "foo" : -12e+34,
+    "bar" : [1, 2, 3, "\"\r\n\t"],
+    "baz" : {
+        "x" : "a",
+        "y" : "b",
+        "z" : "c"
+    },
+    "currency" : "\u20AC",
+    "utf-8" : "∂ ∆ ∏ ∑ − ∕ ∙ √ ∞ ∟ ∩ ∫ ≈ ≠ ≡ ≤ ≥ € 𝄞",
+    "surrogate-Deseret" : "\uD801\uDC37",
+    "surrogate-G-clef" : "\uD834\uDD1E",
+    "boolean-true" : true,
+    "boolean-false" : false,
+    "another-true" : true,
+    "another-false" : false,
+    "null-value" : null,
+    "empty-array" : [],
+    "empty-object" : {},
+    "very-long-number" : 12345678901234567890123456789012345678901234567890
+}
