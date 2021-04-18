@@ -209,23 +209,48 @@ int json_is_null(JSON *j);
 /**
  * ### `int json_is_boolean(JSON *j)`
  *
- * Returns non-zero if `j` represents the JSON `true` or `false` values
+ * Returns non-zero if `j` and only if represents the JSON
+ * `true` or `false` values.
  */
 int json_is_boolean(JSON *j);
 
 /**
  * ### `int json_is_true(JSON *j)`
  *
- * Returns non-zero if `j` represents the JSON `true` value
+ * Returns non-zero if `j` represents the JSON `true` value.
+ *
+ * It resembles the JavaScript operation `j === true`. See
+ * `json_is_truthy()` for the less strict version.
  */
 int json_is_true(JSON *j);
 
 /**
  * ### `int json_is_false(JSON *j)`
  *
- * Returns non-zero if `j` represents the JSON `false` value
+ * Returns non-zero if `j` represents the JSON `false` value.
+ *
+ * It resembles the JavaScript operation `j === false`. See
+ * `json_is_falsey()` for the less strict version.
  */
 int json_is_false(JSON *j);
+
+/**
+ * ### `int json_is_truthy(JSON *j)`
+ *
+ * Returns non-zero if `j` represents a JSON [_truthy_][truthy] value.
+ *
+ * [truthy]: https://developer.mozilla.org/en-US/docs/Glossary/Truthy
+ */
+int json_is_truthy(JSON *j);
+
+/**
+ * ### `int json_is_falsey(JSON *j)`
+ *
+ * Returns non-zero if `j` represents a JSON [_falsey_][falsey] value.
+ *
+ * [falsey]: https://developer.mozilla.org/en-US/docs/Glossary/Falsy
+ */
+int json_is_falsey(JSON *j);
 
 /**
  * ### `int json_is_number(JSON *j)`
@@ -278,6 +303,29 @@ const char *json_as_string(JSON *j);
 int json_obj_has(JSON *obj, const char *name);
 
 /**
+ * ### `const char *json_obj_next(JSON *j, const char *name);`
+ *
+ * Returns the next key in a JSON object following `name`.
+ *
+ * If name is `NULL`, it will return the first key in the object.
+ *
+ * It will return `NULL` if `name` is the last key in the object.
+ *
+ * It kan be used for iterating through all the keys in an object,
+ * for example:
+ *
+ * ```
+ * const char *name = json_obj_next(obj, NULL);
+ * while(name) {
+ *   JSON *item = json_obj_get(obj, name);
+ *   // --snip--
+ *   name = json_obj_next(obj, name);
+ * }
+ * ```
+ */
+const char *json_obj_next(JSON *j, const char *name);
+
+/**
  * ### `JSON *json_obj_get(JSON *obj, const char *name)`
  *
  * Retrieves the value associated with `name` in the JSON object `obj`.
@@ -297,6 +345,15 @@ JSON *json_obj_get(JSON *obj, const char *name);
 double json_obj_get_number(JSON *obj, const char *name);
 
 /**
+ * ### `double json_obj_get_number_or(JSON *obj, const char *name, double def)`
+ *
+ * Returns the JSON entity associated with `name` in the JSON
+ * object `obj` as a number, or returns a default value `def` if
+ * `obj[name]` is not numeric.
+ */
+double json_obj_get_number_or(JSON *obj, const char *name, double def);
+
+/**
  * ### `const char *json_obj_get_string(JSON *obj, const char *name)`
  *
  * Returns the JSON entity associated with `name` in the JSON
@@ -305,6 +362,35 @@ double json_obj_get_number(JSON *obj, const char *name);
  * It returns `NULL` if `obj[name]` is not a string.
  */
 const char *json_obj_get_string(JSON *obj, const char *name);
+
+/**
+ * ### `const char *json_obj_get_string_or(JSON *j, const char *name, const char *def)`
+ *
+ * Returns the JSON entity associated with `name` in the JSON
+ * object `obj` as a string, or returns a default value `def` if
+ * `obj[name]` is not a string.
+ */
+const char *json_obj_get_string_or(JSON *j, const char *name, const char *def);
+
+/**
+ * ### `int json_obj_get_bool(JSON *j, const char *name)`
+ *
+ * Returns the JSON entity associated with `name` in the JSON
+ * object `obj` as a boolean value (zero = false, non-zero is true).
+ *
+ * It returns false if `obj[name]` is not boolean.
+ */
+int json_obj_get_bool(JSON *j, const char *name);
+
+/**
+ * ### `int json_obj_get_bool(JSON *j, const char *name)`
+ *
+ * Returns the JSON entity associated with `name` in the JSON
+ * object `obj` as a boolean value (zero = false, non-zero is true).
+ *
+ * It returns false if `obj[name]` is not boolean.
+ */
+int json_obj_get_bool_or(JSON *j, const char *name, int def);
 
 /**
  * ### `JSON *json_obj_set(JSON *obj, char *k, JSON *v)`

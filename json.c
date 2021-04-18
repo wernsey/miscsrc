@@ -1,10 +1,16 @@
 /*
  * JSON Parser and serializer.
  *
- * https://www.json.org/json-en.html
- * https://tools.ietf.org/id/draft-ietf-json-rfc4627bis-09.html
+ * * [www.json.org][json.org]
+ * * [RFC 7159][rfc7159]
+ * * [RFC 4627][rfc4627]
  *
  * See `json.h` for more info
+ *
+ * [json.org]: https://www.json.org/json-en.html
+ * [rfc7159]: https://tools.ietf.org/html/rfc7159
+ * [rfc4627]: https://tools.ietf.org/id/draft-ietf-json-rfc4627bis-09.html
+ *
  *
  * This is free and unencumbered software released into the public domain.
  * http://unlicense.org/
@@ -26,6 +32,8 @@
 #include <stdint.h>
 #include <assert.h>
 
+#include <math.h>
+
 #include "json.h"
 
 typedef struct HashTable HashTable;
@@ -45,7 +53,7 @@ typedef struct Array Array;
  * [postel]: https://en.wikipedia.org/wiki/Robustness_principle
  */
 #ifndef JSON_COMMENTS
-#define JSON_COMMENTS 1
+#  define JSON_COMMENTS 1
 #endif
 
 /*
@@ -69,7 +77,7 @@ typedef struct Array Array;
  * non-reentrant use case.
  */
 #ifndef JSON_REENTRANT
-#define JSON_REENTRANT 1
+#  define JSON_REENTRANT 1
 #endif
 
 /*
@@ -84,7 +92,7 @@ typedef struct Array Array;
  * object to be allocated.
  */
 #ifndef JSON_INTERN_STRINGS
-#define JSON_INTERN_STRINGS 1
+#  define JSON_INTERN_STRINGS 1
 #endif
 
 /*
@@ -95,7 +103,25 @@ typedef struct Array Array;
  * some other overheads.
  */
 #ifndef JSON_USE_RED_BLACK
-#define JSON_USE_RED_BLACK 1
+#  define JSON_USE_RED_BLACK 1
+#endif
+
+/*
+ * Per section 6 of [rfc4627][]:
+ * _"Numeric values that cannot be represented in the grammar below
+ * (such as Infinity and NaN) are not permitted"_
+ *
+ * If `JSON_BAD_NUMBERS_AS_STRINGS` is zero then NaN, Infinity and
+ * -Infinity will be emitted as `null` by the serializer. This seems
+ * to correspond to how other JSON libraries handle the situation
+ * and is the default.
+ *
+ * If `JSON_BAD_NUMBERS_AS_STRINGS` is non-zero then NaN, Infinity and
+ * -Infinity will be emitted as the string values "NaN", "Infinity"
+ * and "-Infinity" respectively by the serializer.
+ */
+#ifndef JSON_BAD_NUMBERS_AS_STRINGS
+#  define JSON_BAD_NUMBERS_AS_STRINGS 0
 #endif
 
 /* =========================================================== */
@@ -1201,6 +1227,18 @@ static int serialize_value(Emitter *e, JSON *j, int pretty, int indent) {
                 return 0;
 		} break;
 		case j_number:
+#if defined(isnan) && defined(INFINITY)
+            if(isnan(j->value.number) || j->value.number == INFINITY || j->value.number == -INFINITY) {
+#if JSON_BAD_NUMBERS_AS_STRINGS
+                if(isnan(j->value.number)) emit_text(e, "\"NaN\"");
+                else if(j->value.number == INFINITY) emit_text(e, "\"Infinity\"");
+                else if(j->value.number == -INFINITY) emit_text(e, "\"-Infinity\"");
+#else
+                emit_text(e, "null");
+#endif
+                return 1;
+            }
+#endif
             snprintf(buffer, sizeof buffer, "%g", j->value.number);
             if(!emit_text(e, buffer))
                 return 0;
@@ -1421,6 +1459,27 @@ int json_is_false(JSON *j) {
 	return j->type == j_false;
 }
 
+int json_is_truthy(JSON *j) {
+    return !json_is_falsey(j);
+}
+
+int json_is_falsey(JSON *j) {
+    if(!j || j->type == j_false || j->type == j_null)
+        return 1;
+    if(j->type == j_string && strlen(j->value.string) == 0)
+        return 1;
+#ifdef isnan
+    /* Technically, NaN is not part of JSON, but I included it here for
+    completeness */
+    if(j->type == j_number && (j->value.number == 0 || isnan(j->value.number)))
+        return 1;
+#else
+    if(j->type == j_number && j->value.number == 0)
+        return 1;
+#endif
+    return 0;
+}
+
 int json_is_number(JSON *j) {
 	return j->type == j_number;
 }
@@ -1455,6 +1514,12 @@ int json_obj_has(JSON *j, const char *name) {
 	return ht_get(h, name) != NULL;
 }
 
+const char *json_obj_next(JSON *j, const char *name) {
+	assert(j->type == j_object);
+	HashTable *h = j->value.object;
+	return ht_next(h, name);
+}
+
 JSON *json_obj_get(JSON *j, const char *name) {
 	assert(j->type == j_object);
 	HashTable *h = j->value.object;
@@ -1462,19 +1527,40 @@ JSON *json_obj_get(JSON *j, const char *name) {
 }
 
 double json_obj_get_number(JSON *j, const char *name) {
+	return json_obj_get_number_or(j, name, 0.0);
+}
+
+double json_obj_get_number_or(JSON *j, const char *name, double def) {
 	assert(j->type == j_object);
 	JSON *v = json_obj_get(j, name);
 	if(v)
 		return json_as_number(v);
-	return 0.0;
+	return def;
 }
 
 const char *json_obj_get_string(JSON *j, const char *name) {
+    return json_obj_get_string_or(j, name, NULL);
+}
+
+const char *json_obj_get_string_or(JSON *j, const char *name, const char *def) {
 	assert(j->type == j_object);
 	JSON *v = json_obj_get(j, name);
 	if(v)
 		return json_as_string(v);
-	return NULL;
+	return def;
+}
+
+int json_obj_get_bool(JSON *j, const char *name) {
+	return json_obj_get_bool_or(j, name, 0);
+}
+
+int json_obj_get_bool_or(JSON *j, const char *name, int def) {
+	assert(j->type == j_object);
+	JSON *v = json_obj_get(j, name);
+	if(v) {
+		return json_is_true(v);
+    }
+	return def;
 }
 
 /*

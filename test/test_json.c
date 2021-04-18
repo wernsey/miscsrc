@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "../json.h"
 
@@ -59,6 +60,14 @@ int main(int argc, char *argv[]) {
         json_obj_set_string(j, "non-string", json_obj_get_string(j, "key-that-doesn't exist"));
         json_obj_set(j, "null-value", NULL);
         json_obj_set_string(j, "null-string-value", NULL);
+
+#if defined(NAN)
+        json_obj_set_number(j, "nan", NAN);
+#endif
+#if defined(INFINITY)
+        json_obj_set_number(j, "infinity", INFINITY);
+        json_obj_set_number(j, "-infinity", -INFINITY);
+#endif
     }
 
     /* char *s = json_serialize(j); */
