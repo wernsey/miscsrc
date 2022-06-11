@@ -9,6 +9,7 @@ The modules include:
  * A set of functions to read, write and manipulate __Comma Separated Values__ (CSV) files,
  * A parser for __INI__ configuration files,
  * A mathematical expression evaluator,
+ * Functions to load and store WAV files,
  * A mark-and-sweep garbage collector,
  * A reference counting garbage collector,
  * A simple regular expression pattern matcher,

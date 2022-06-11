@@ -3,7 +3,7 @@ CFLAGS= -c -Wall
 LDFLAGS= -lm
 
 # Add your source files here:
-LIB_SOURCES=csv.c eval.c getarg.c hash.c ini.c list.c regex.c simil.c utils.c gc.c refcnt.c json.c
+LIB_SOURCES=csv.c eval.c getarg.c hash.c ini.c list.c regex.c simil.c utils.c gc.c refcnt.c json.c wav.c
 LIB_OBJECTS=$(LIB_SOURCES:.c=.o)
 LIB=libmisc.a
 
@@ -55,6 +55,7 @@ simil.o: simil.c simil.h
 regex.o: regex.c regex.h
 gc.o: gc.c gc.h
 json.o: json.c json.h
+wav.o: wav.c wav.h
 
 # Test programs: Compile .o to executable
 $(TEST_OBJECTS):

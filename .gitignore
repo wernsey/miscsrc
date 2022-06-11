@@ -5,6 +5,7 @@ test/*.exe
 test/*.ini
 test/*.db
 .gdbinit
+.vscode
 
 # Linux test executables
 test/test_arg
