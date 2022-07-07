@@ -7,9 +7,10 @@ LIB_SOURCES=csv.c eval.c getarg.c hash.c ini.c list.c regex.c simil.c utils.c gc
 LIB_OBJECTS=$(LIB_SOURCES:.c=.o)
 LIB=libmisc.a
 
-DOCS=$(LIB_SOURCES:%.c=docs/%.html) docs/readme.html
+DOCS=$(LIB_SOURCES:%.c=docs/%.html) docs/csvstrm.html docs/readme.html
 
-TEST_SOURCES=test/test_csv.c test/test_eval.c test/test_arg.c test/test_hash.c test/test_list.c test/test_rx.c test/test_sim.c test/test_ini.c test/test_json.c
+TEST_SOURCES=test/test_csv.c test/test_eval.c test/test_arg.c test/test_hash.c test/test_list.c \
+			test/test_rx.c test/test_sim.c test/test_ini.c test/test_json.c test/test_csvstrm.c
 TEST_OBJECTS=$(TEST_SOURCES:%.c=%.o)
 
 ifeq ($(BUILD),debug)
@@ -74,6 +75,7 @@ test/test_list.o: test/test_list.c list.h utils.h
 test/test_rx.o: test/test_rx.c regex.h
 test/test_sim.o: test/test_sim.c simil.h
 test/test_json.o: test/test_json.c json.h
+test/test_csvstrm.o: test/test_csvstrm.c csvstrm.h
 
 test/test_arg$(EXE): test/test_arg.o getarg.o
 test/test_csv$(EXE): test/test_csv.o csv.o utils.o
@@ -84,6 +86,7 @@ test/test_list$(EXE): test/test_list.o list.o utils.o
 test/test_rx$(EXE): test/test_rx.o regex.o
 test/test_sim$(EXE): test/test_sim.o simil.o
 test/test_json$(EXE): test/test_json.o json.o
+test/test_csvstrm$(EXE): test/test_csvstrm.o
 
 docs:
 	mkdir -p docs
