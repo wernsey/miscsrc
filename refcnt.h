@@ -12,21 +12,21 @@
  * * Use `rc_retain()` to increment an object's reference count.
  *
  * ## Debug mode
- * 
+ *
  * The reference counter contains some additional features to track where memory
  * is allocated, retained and released if compiled with `NDEBUG` not defined.
- * 
+ *
  * This can help to troubleshoot potential memory leaks where not all objects are released.
- * 
+ *
  * It adds some overhead, so it is disabled if `NDEBUG` is defined for release
  * mode builds.
- * 
+ *
  * Call `rc_init()` at the start of your program to register a function with
  * `atexit()` that will print all unreleased objects and their usages to
  * `stdout` when the program terminates.
- * 
+ *
  * ## References
- * 
+ *
  * * <http://www.xs-labs.com/en/archives/articles/c-reference-counting/>
  * * ~~<http://denis.ws/essays/c-reference-counting-and-you/>~~
  *   (Gone; and I couldn't find it on archive.org either)
@@ -36,7 +36,7 @@
  * ### License
  *
  *     Author: Werner Stoop
- *     This software is provided under the terms of the unlicense.
+ *     This is free and unencumbered software released into the public domain.
  *     See http://unlicense.org/ for more details.
  *
  * ## API
@@ -46,7 +46,7 @@
 /**
  * #### `void *rc_alloc(size_t size)`
  * Allocates a reference counted object of `size` bytes.
- * 
+ *
  * The object's reference count is initialised to 1, so every call to
  * `rc_alloc()` should have a corresponding call to `rc_release()`
  */
@@ -70,7 +70,7 @@ void *rc_strdup_(const char *s, const char *file, int line);
 
 /**
  * #### `char *rc_memdup(const char *s)`
- * Returns a reference counted duplicate of the `size` bytes in `*p` 
+ * Returns a reference counted duplicate of the `size` bytes in `*p`
  */
 #ifdef NDEBUG
 void *rc_memdup(const void *p, size_t size);
@@ -99,7 +99,7 @@ void *rc_realloc_(void *p, size_t size, const char *file, int line);
 /**
  * #### `void *rc_retain(void *p)`
  * Increments an object's reference count.
- * 
+ *
  * Every call to `rc_retain()` should have a corresponding call to
  * `rc_release()`
  */
@@ -113,7 +113,7 @@ void *rc_retain_(void *p, const char *file, int line);
 /**
  * #### `void rc_release(void *p)`
  * Decrements an object's referenc count.
- * 
+ *
  * If the reference count reaches 0, the object's destructor
  * (see `rc_set_dtor()`) gets called, and the object is reclaimed.
  */
@@ -126,8 +126,8 @@ void rc_release_(void *p, const char *file, int line);
 
 /**
  * #### `void *rc_assign(void **p, void *val)`
- * Does the equivalent of `if(*p) rc_release(*p); *p = val;` 
- * 
+ * Does the equivalent of `if(*p) rc_release(*p); *p = val;`
+ *
  * Assigns a value to `*p`, but if `*p`
  * already has a value, it is released first.
  */
@@ -142,7 +142,7 @@ void *rc_assign_(void **p, void *val, const char *file, int line);
  * #### `typedef void (*ref_dtor)(void *)`
  * Type for the destructor function that gets called on an object if its
  * memory gets reclaimed (see `rc_set_dtor()`).
- * 
+ *
  * It takes a single parameter: The object being reclaimed.
  */
 typedef void (*ref_dtor)(void *);
@@ -150,12 +150,12 @@ typedef void (*ref_dtor)(void *);
 /**
  * #### `void rc_set_dtor(void *p, ref_dtor dtor)`
  * Registers a destructor function `dtor` on an object `p`.
- * 
+ *
  * The destructor function is called on an object before its memory is reclaimed
  * when its reference count reaches 0 in `rc_release()`. This gives the object
  * an opportunity to release references it has on other objects and to close
  * other resources.
- * 
+ *
  * Destructors are optional.
  */
 void rc_set_dtor(void *p, ref_dtor dtor);
@@ -163,7 +163,7 @@ void rc_set_dtor(void *p, ref_dtor dtor);
 /**
  * #### `void rc_init()`
  * Initializes the troubleshooting mode of the reference counter.
- * 
+ *
  * It does nothing if `NDEBUG` is defined for release builds.
  */
 void rc_init();

@@ -1,6 +1,6 @@
 /**
  * # `regex.h`
- * 
+ *
  * This is a regular expression evaluator based on code from the article
  * "Regular Expressions: Languages, algorithms, and software"
  * By Brian W. Kernighan and Rob Pike in the April 1999 issue of
@@ -11,13 +11,13 @@
  *
  * ## Usage
  *
- * * `rx_match()` is used to match text to a pattern. 
+ * * `rx_match()` is used to match text to a pattern.
  * * `rx_search()` is used to find the position of text matching a pattern
  *  for further processing.
  * * `rx_sub()` is used to substitute a piece of text matching a regex with
  *    some other text.
- * * `rx_gsub()` is used to substitute all pieces of the text matching a regex 
- *    with some other text. 
+ * * `rx_gsub()` is used to substitute all pieces of the text matching a regex
+ *    with some other text.
  *
  * ## Syntax
  * The evaluator implements only a subset of the usual regular expression
@@ -37,7 +37,7 @@
  *   * `\x` - Hexadecimal digits: `[0-9a-fA-F]`
  *   * `\s` - Whitespace characters
  *   * Upper case versions of these are used to negate the class. For example,
- *     `\A` matches anything that is not an alphabetic character: `[!a-zA-Z]` 
+ *     `\A` matches anything that is not an alphabetic character: `[!a-zA-Z]`
  * * Case-insensitive matching is enabled with `'\i'` and disabled with `'\I'`
  *
  * The tradeoff is a very compact implementation.
@@ -54,7 +54,7 @@
  * ### License
  *
  *     Author: Werner Stoop
- *     This software is provided under the terms of the unlicense.
+ *     This is free and unencumbered software released into the public domain.
  *     See http://unlicense.org/ for more details.
  *
  * ## API
@@ -72,7 +72,7 @@ extern "C"
 /**
  * #### `int rx_match (const char *text, const char *re)`
  * Checks whether the text `text` contains the regular expression `re`.
- * 
+ *
  * It returns non-zero if the regular expression `re` was found in `text`,
  * zero otherwise
  */
@@ -80,16 +80,16 @@ extern "C"
 
 /**
  * #### `int rx_search (const char *text, const char *re, const char **beg, const char **end)`
- * Checks whether the text `text` contains the regular expression `re` and 
+ * Checks whether the text `text` contains the regular expression `re` and
  * extracts the match.
- * 
+ *
  * It uses greedy matching internally to locate the leftmost longest match.
- * 
+ *
  * If `text` matches the expression the char pointer pointed to
  * by `beg` will contain the address of the first character in `text`
- * that matched `re` and `end` will contain the address of the last 
+ * that matched `re` and `end` will contain the address of the last
  * character in `text` that matched `re`.
- * 
+ *
  * It returns non-zero if the regular expression `re` was found in `text`,
  * zero otherwise.
  */
@@ -98,19 +98,19 @@ extern "C"
 
 /**
  * #### `char *rx_sub (const char *text, const char *re, const char *sub)`
- * Substitutes the first occurance of `text` that matches 
+ * Substitutes the first occurance of `text` that matches
  * `re` with `sub`.
  *
  * Using a `'&'` in sub will replace that part of `sub` with the part of
  * `text` that matched `re`.
- * 
+ *
  * For example, `rx_sub("#foooo#", "fo+", "|&|")` will return `"#|foooo|#"`.
- * 
+ *
  * Use a `'/'` to escape the `'&'` (eg `'/&'`) and use a `'//'` to have a single
  * `'/'` (`'/'` was chosen to avoid C's use of the `'\'` causing confusion).
- * 
+ *
  * For example `rx_sub("#foooo#", "fo+", "// /&")` will return `"#/ &#"`.
- * 
+ *
  * It returns the result that should be `free()`'d afterwards.
  * It may return `NULL` on a `malloc()` failure.
  */
@@ -119,17 +119,17 @@ extern "C"
 /**
  * #### `char *rx_gsub (const char *text, const char *re, const char *sub)`
  * Substitutes all occurances of `text` that matches `re` with `sub`.
- * 
+ *
  * Using a `'&'` in sub will replace that part of `sub` with the part of
  * `text` that matched `re`.
- * 
+ *
  * For example, `rx_gsub("#foooo#", "fo+", "|&|")` will return `"#|foooo|#"`.
- * 
+ *
  * Use a `'/'` to escape the `'&'` (eg `'/&'`) and use a `'//'` to have a single
  * `'/'` (`'/'` was chosen to avoid C's use of the `'\'` causing confusion).
- * 
+ *
  * For example `match_sub("#foooo#", "fo+", "// /&")` will return `"#/ &#"`.
- * 
+ *
  * It returns the result that should be `free()`'d afterwards.
  * It may return `NULL` on a `malloc()` failure.
  */

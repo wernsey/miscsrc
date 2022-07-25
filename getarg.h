@@ -1,11 +1,11 @@
 /**
- * # getarg.h: 
+ * # getarg.h:
  * Replacement for the POSIX `getopt()` function for processing
  * command-line options. I use it for compiling programs that require command-
- * line arguments under Windows, but my goal is to have it portable to use 
+ * line arguments under Windows, but my goal is to have it portable to use
  * in programs compiled on other platforms.
  *
- * Although I've consulted the relavant `getopt()` manual pages, this 
+ * Although I've consulted the relavant `getopt()` manual pages, this
  * implementation is entirely my own.
  *
  * Use it as you would use `getopt()`, but replace all the "opt" prefixes
@@ -14,7 +14,7 @@
  * ### License
  *
  *     Author: Werner Stoop
- *     This software is provided under the terms of the unlicense.
+ *     This is free and unencumbered software released into the public domain.
  *     See http://unlicense.org/ for more details.
  *
  * ## API
@@ -27,14 +27,14 @@ extern "C" {
 
 /**
  * ### Variables
- * 
+ *
  * * `argind` - Replaces `getopt()`'s `optind`
  * * `argopt` - Replaces `getopt()`'s `optopt`
  * * `argarg` - Replaces `getopt()`'s `optarg`
  */
 extern char *argarg;
 extern int argind, argopt;
- 
+
 /**
  * ### Functions
  * #### `char getarg(int argc, char * const argv[], const char *opts)`

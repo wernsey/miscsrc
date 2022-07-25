@@ -13,7 +13,7 @@
  * ### License
  *
  *     Author: Werner Stoop
- *     This software is provided under the terms of the unlicense.
+ *     This is free and unencumbered software released into the public domain.
  *     See http://unlicense.org/ for more details.
  *
  * ## API
@@ -34,17 +34,17 @@ extern "C"
 /**
  * #### `typedef void (*clear_all_dtor) (const char *key, void *val)`
  * A pointer to a function that can clean up values in the hash table.
- * 
+ *
  * Clean up implies freeing memory allocated to the hash table or the
  * freeing of other resources allocated to the elements.
- * 
+ *
  * If, for example, the hash table stores `FILE` handles, this function
  * can be used to close all open files referenced in the hash table.
  */
   typedef void (*clear_all_dtor) (const char *key, void *val);
 
 /** struct hash_el
- * Element stored within the hash table 
+ * Element stored within the hash table
  */
   struct hash_el
   {
@@ -56,7 +56,7 @@ extern "C"
 /**
  * #### `struct hash_tbl`
  * Structure for managing tha hash table.
- * 
+ *
  * Allocate this structure through `ht_create()`
  * and deallocate it with `ht_free()`
  */
@@ -74,22 +74,22 @@ extern "C"
 /**
  * #### `struct hash_tbl *ht_create (int size)`
  * Allocates memory for a hash table.
- * 
+ *
  * The hash table size must be a power of two, because
  * the mod operation is performed by the bitwise AND of
  * the sum and (size - 1).
- * 
+ *
  * Setting size to 0 specifies a default value.
  */
   struct hash_tbl *ht_create (int size);
 
 /**
  * #### `int ht_rehash (struct hash_tbl *ht, int new_size)`
- * Resizes the hashtable `ht` to the `new_size`, by rehashing 
+ * Resizes the hashtable `ht` to the `new_size`, by rehashing
  * each key in the table.
- * 
+ *
  * The new size must be a power of two.
- * 
+ *
  * This function is normally called automatically in `ht_insert()`
  * if the table reaches a certain size.
  */
@@ -97,9 +97,9 @@ extern "C"
 
 /**
  * #### `void *ht_insert (struct hash_tbl *h, const char *key, void *value)`
- * Inserts a `value` referenced by the string `key` 
+ * Inserts a `value` referenced by the string `key`
  * into the hash table `h`.
- * 
+ *
  * It returns `value` on success, or `NULL` if an internal `malloc()`
  * failed.
  */
@@ -114,8 +114,8 @@ extern "C"
   void *ht_find (struct hash_tbl *h, const char *key);
 
 /*@ const char *##ht_next (struct hash_tbl *h, const char *key)
- *# Given a specific {{key}}, this finds the key of the next element in 
- *# a particular hash table {{h}}. This can be used to iterate through 
+ *# Given a specific {{key}}, this finds the key of the next element in
+ *# a particular hash table {{h}}. This can be used to iterate through
  *# the table.\n
  *# Specifying a value of {{NULL}} as the key retrieves the first key.\n
  *# It returns {{NULL}} if there are no more entries in the table.\n
@@ -131,10 +131,10 @@ extern "C"
  */
   void *ht_delete (struct hash_tbl *h, const char *key);
 
-/** 
+/**
  * #### `void ht_free (struct hash_tbl *h, clear_all_dtor dtor)`
  * Deletes a hash table `h`.
- * 
+ *
  * The parameter `dtor` can point to a function that will free
  * resources (memory, handles, etc) allocated to the values in the table.
  * This function will be called for each value in the table.
@@ -143,11 +143,11 @@ extern "C"
 
 /**
  * #### `void ht_foreach(struct hash_tbl *h, int (*f)(const char *key, void *value, void *data), void *data)`
- * 
+ *
  * Perform the function `f()` for each key-value pair in the hashtable `h`.
- * 
+ *
  * The `data` parameter is passed to `f()` unmodified.
- * 
+ *
  * If `f()` returns 0, the iteration is terminated.
  */
   void ht_foreach (struct hash_tbl *h,

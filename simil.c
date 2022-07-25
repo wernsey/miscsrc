@@ -3,12 +3,12 @@
  *
  *	The Ratcliff-Obershelp algorithm was presented in Dr Dobbs' Journal in
  *	the article "Pattern Matching: The Gestalt Approach" by John W. Ratcliff
- *	and David E. Metzener in July 1988. 
- *	  Unfortunately the original implementation was in assembly, limiting its 
- *	portability and readability, and its relevance to modern architectures 
- *	(although its performance was extremely optimized). 
- *	  In Nov 1988 Joe Preston sent a C implementation of the algorithm to 
- *	Dr. Dobbs' letters to the editor. The C implementation used a recursive 
+ *	and David E. Metzener in July 1988.
+ *	  Unfortunately the original implementation was in assembly, limiting its
+ *	portability and readability, and its relevance to modern architectures
+ *	(although its performance was extremely optimized).
+ *	  In Nov 1988 Joe Preston sent a C implementation of the algorithm to
+ *	Dr. Dobbs' letters to the editor. The C implementation used a recursive
  *	algorithm. Unfortunately, according to the author it ran about twice as slow
  *	as the original. My implementation is inspired by that C implementation.
  *
@@ -20,14 +20,17 @@
  *	article described educational software that can deal with spelling errors in
  *	answers. Other uses are applications that could supply a user with feedback
  *	along the lines of "The command 'fobo' is invalid. Did you mean 'foo'?" or
- *	intelligent compilers that could make suggestions when identifiers or 
+ *	intelligent compilers that could make suggestions when identifiers or
  *	keywords are used incorrectly.
+ *
+ * This is free and unencumbered software released into the public domain.
+ * http://unlicense.org/
  */
- 
+
 /*
  * See simil.h for more info
  */
- 
+
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -36,7 +39,7 @@ static int rsimil (const char *a, int alen, const char *b, int blen, int cs);
 
 /*
  *	Tests the similarity of two strings a and b using the Ratcliff-Obershelp
- *	method. 	
+ *	method.
  *	The return value is a value between 0 and 100 where 0 means that the
  *	two strings have nothing in common, and 100 means that they're exact
  *	matches.
@@ -59,8 +62,8 @@ simil (const char *a, const char *b)
  *	Case insensitive version of simil().
  *	It copies the strings internally using strdup(), converts the copies
  *	to uppercase, and compares those.
- *	It returns the same values as simil(), but it may also return zero if 
- *	the calls to strdup() fail. 
+ *	It returns the same values as simil(), but it may also return zero if
+ *	the calls to strdup() fail.
  */
 int
 isimil (const char *a, const char *b)

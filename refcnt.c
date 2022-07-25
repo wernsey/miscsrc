@@ -27,6 +27,9 @@
  *
  * Based on this article:
  * http://www.xs-labs.com/en/archives/articles/c-reference-counting/
+ *
+ * This is free and unencumbered software released into the public domain.
+ * http://unlicense.org/
  */
 #include <stdio.h>
 #include <stdlib.h>

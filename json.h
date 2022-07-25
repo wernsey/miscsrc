@@ -6,7 +6,7 @@
  * ## License
  *
  *     Author: Werner Stoop
- *     This software is provided under the terms of the unlicense.
+ *     This is free and unencumbered software released into the public domain.
  *     See http://unlicense.org/ for more details.
  *
  * ## References

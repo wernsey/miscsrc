@@ -1,5 +1,8 @@
 /*
-gcc -Wall -DWAV_TEST wav.c
+ * gcc -Wall -DWAV_TEST wav.c
+ *
+ * This is free and unencumbered software released into the public domain.
+ * http://unlicense.org/
 */
 #include <stdio.h>
 #include <stdlib.h>

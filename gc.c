@@ -1,6 +1,9 @@
 /*
-Mark and sweep garbage collector.
-*/
+ * Mark and sweep garbage collector.
+ *
+ * This is free and unencumbered software released into the public domain.
+ * http://unlicense.org/
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,7 +29,7 @@ typedef struct gc_object {
 	int mark;
 	gc_function marker;
 	gc_function dtor;
-	
+
 #ifndef NDEBUG
 	/* In debug mode, we can track and display where the
 		objects were allocated for troubleshooting.
@@ -34,15 +37,15 @@ typedef struct gc_object {
 	const char *file;
 	int line;
 #endif
-	
+
 	int retcount;
-	
-	/* For the linked list of all objects; for the sweep */ 
+
+	/* For the linked list of all objects; for the sweep */
 	struct gc_object *next, *prev;
-	
+
 	/* For the list of root obects for the mark */
 	struct gc_object *rnext, *rprev;
-	
+
 } GcObj;
 
 /* All objects allocated for sweep */
@@ -60,7 +63,7 @@ void *gc_alloc_(size_t size, const char *file, int line) {
 #endif
 	void *data;
 	GcObj *r;
-	
+
 	if(gc_counter++ > GC_INTERVAL) {
 		gc_counter = 0;
 		gc_collect();
@@ -71,9 +74,9 @@ void *gc_alloc_(size_t size, const char *file, int line) {
 	r->mark = 0;
 	r->marker = NULL;
 	r->dtor = NULL;
-	
+
 	r->retcount = 0;
-	
+
 #ifndef NDEBUG
 	r->file = file;
 	r->line = line;
@@ -82,11 +85,11 @@ void *gc_alloc_(size_t size, const char *file, int line) {
 	r->next = gc_objs;
 	gc_objs = r;
 	if(r->next) r->next->prev = r;
-	r->prev = NULL;	
-	
+	r->prev = NULL;
+
 	r->rnext = NULL;
 	r->rprev = NULL;
-	
+
 	return data;
 }
 
@@ -94,16 +97,16 @@ void *gc_retain(void *p) {
 	GcObj *r;
 	assert(p);
 	r = (GcObj *)((char *)p - sizeof *r);
-	
+
 	assert(r->retcount >= 0);
 	if(r->retcount == 0) {
 		r->rnext = gc_roots;
 		gc_roots = r;
 		if(r->rnext) r->rnext->rprev = r;
-		r->rprev = NULL;	
+		r->rprev = NULL;
 	}
 	r->retcount++;
-	
+
 	return p;
 }
 
@@ -111,10 +114,10 @@ void gc_release(void *p) {
 	GcObj *r;
 	assert(p);
 	r = (GcObj *)((char *)p - sizeof *r);
-	
+
 	assert(r->retcount > 0);
 	r->retcount--;
-	if(r->retcount == 0) {	
+	if(r->retcount == 0) {
 		if(r->rnext)  r->rnext->rprev = r->rprev;
 		if(r->rprev)  r->rprev->rnext = r->rnext;
 		if(gc_roots == r)
@@ -133,12 +136,12 @@ void gc_mark(void *p) {
 	if(r->mark) return;
 	r->mark = 1;
 	gc_markedx++;
-	if(r->marker) 
+	if(r->marker)
 		r->marker(p);
 }
 
 static void gc_mark_all() {
-	GcObj *gc; 
+	GcObj *gc;
 	gc_markedx = 0;
 	for(gc = gc_roots; gc; gc = gc->rnext) {
 		void *data = (char*)gc + sizeof *gc;
@@ -150,26 +153,26 @@ static void gc_mark_all() {
 }
 
 static void gc_sweep() {
-	GcObj *gc = gc_objs; 
-	
+	GcObj *gc = gc_objs;
+
 	int collected = 0;
-	
+
 	while(gc) {
 		if(gc->mark == 0) {
 			GcObj *col = gc;
 			gc = gc->next;
-			
+
 			if(col->next)  col->next->prev = col->prev;
 			if(col->prev)  col->prev->next = col->next;
 			if(gc_objs == col)
 				gc_objs = col->next;
-			
+
 			if(col->dtor) {
 				void *data = (char*)col + sizeof *col;
 				col->dtor(data);
 			}
 			free(col);
-			
+
 			collected++;
 		} else {
 			gc->mark = 0;
@@ -201,10 +204,10 @@ void gc_set_marker(void *p, gc_function marker) {
 }
 
 void gc_dump() {
-	GcObj *gc = gc_roots; 
+	GcObj *gc = gc_roots;
 	if(gc) {
 		printf("Roots:\n");
-		while(gc) {		
+		while(gc) {
 			void *data = (char*)gc + sizeof *gc;
 #ifndef NDEBUG
 			printf("    - %p (%d) @ %s:%d\n", data, gc->retcount, gc->file, gc->line);
@@ -215,7 +218,7 @@ void gc_dump() {
 		}
 	}
 
-	gc = gc_objs; 
+	gc = gc_objs;
 	if(gc) {
 		printf("Garbage:\n");
 		while(gc) {

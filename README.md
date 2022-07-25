@@ -1,6 +1,10 @@
 Miscsrc
 =======
 
+![GitHub](https://img.shields.io/github/license/wernsey/miscsrc)
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/wernsey/miscsrc)
+![GitHub repo file count](https://img.shields.io/github/directory-file-count/wernsey/miscsrc)
+
 A library of miscellaneous C functions I've written over time.
 
 The modules include:
