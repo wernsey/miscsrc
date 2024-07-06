@@ -19,6 +19,9 @@
  * [Parsing JSON is a Minefield](http://seriot.ch/parsing_json.php);
  * I should maybe try running this parser through it one day.
  *
+ * Here's some other examples why JSON parsing is a minefield:
+ * [Unintuitive JSON Parsing](https://nullprogram.com/blog/2019/12/28/)
+ *
  * TODO: I'm not against extending this to [JSON5](https://json5.org/)
  * in principle (See my comments about why I allow comments below).
  * I'm thinking I should parse JSON5 and only emit strict JSON, or
@@ -483,6 +486,10 @@ static char *str_intern(TreeNodes *nodes, int *rootIndex, const char *str) {
 
 #if JSON_USE_RED_BLACK
     repair_tree(nodes, n);
+    /* FIXME: This way of finding the tree's root is
+    more complicated than it needs to be, because the only
+    time the root changes is in the line `array[nnew].parent = p;`
+    at the end of rotate_left() and rotate_right() if p < 0 */
     int i = n;
     while(nodes->array[i].parent >= 0) {
         assert(i < nodes->n && i >= 0);
@@ -511,6 +518,8 @@ static int uncle(TreeNodes *nodes, int n) {
     return -1;
 }
 
+/* FIXME: rotate_left and rotate_right can be simplified by
+combining them into one function */
 static void rotate_left(TreeNodes *nodes, int n) {
     assert(n >= 0 && n < nodes->n);
     ITNode *array = nodes->array;
@@ -551,7 +560,7 @@ static void rotate_right(TreeNodes *nodes, int n) {
     }
 
     if(p >= 0) {
-        if(n == nodes->array[p].left)
+        if(n == array[p].left)
             array[p].left = nnew;
         else
             array[p].right = nnew;

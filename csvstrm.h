@@ -74,8 +74,6 @@ extern "C" {
  * [wiki]: https://en.wikipedia.org/wiki/Comma-separated_values
  * [RFC]: https://datatracker.ietf.org/doc/html/rfc4180
  * [Repici]: https://www.creativyst.com/Doc/Articles/CSV/CSV01.shtml
- * [Markdeep]: https://casual-effects.com/markdeep/
- * [doc-script]: https://gist.github.com/wernsey/de253d42a8df6f3b21358e4b5422b955
  */
 
 
@@ -106,7 +104,7 @@ extern "C" {
  *   If it is 0 then the whitespace will be left intact, so it will be
  *   returned as `" foo "`
  *
- * These macros _must_ be the same in all files that includes **csvstrm.h**.
+ * These macros _must_ be the same in all files that include **csvstrm.h**.
  */
 
 #  ifndef CSV_DELIMITER
@@ -246,7 +244,7 @@ void csv_context_file(CsvContext *csv, FILE *file);
  * (The intended use-case is where a CSV file has been concatenated with other
  * files into an archive file)
  *
- * The `csv_read_limit` structure is defined as follows:
+ * The `csv_read_limit` structure `ll` is defined as follows:
  *
  * ```
  * struct csv_read_limit {
@@ -256,7 +254,7 @@ void csv_context_file(CsvContext *csv, FILE *file);
  * ```
  *
  * where `f` is the file to read from and `limit` is the maximum
- * number of bytes that will be read from a file.
+ * number of bytes that will be read from the file.
  */
 struct csv_read_limit {
     FILE *f;
@@ -323,7 +321,7 @@ enum csv_error_code csv_get_error(CsvContext *csv);
 #  define CAST(x, y)   y
 #endif
 
-static int get_char(CsvContext *csv) {
+static int _csv_get_char(CsvContext *csv) {
     char c = 0;
     if(csv->last_char == EOF) {
         return EOF;
@@ -333,7 +331,7 @@ static int get_char(CsvContext *csv) {
         return c;
     }
     if(csv->in_pos >= CSV_READ_BUFFER_SIZE || (c = csv->raw_buffer[csv->in_pos++]) == '\0') {
-        int cnt = csv->get_data(csv->raw_buffer, CSV_READ_BUFFER_SIZE, csv->data);
+        int cnt = csv->get_data(csv->raw_buffer, CSV_READ_BUFFER_SIZE - 1, csv->data);
         if(!cnt) {
             csv->last_char = EOF;
             return EOF;
@@ -344,7 +342,7 @@ static int get_char(CsvContext *csv) {
     return c;
 }
 
-static void unget_char(CsvContext *csv, int c) {
+static void _csv_unget_char(CsvContext *csv, int c) {
     csv->last_char = c;
 }
 
@@ -364,35 +362,35 @@ int csv_read_record(CsvContext *csv) {
     for(;;) {
         switch(state) {
             case RECORD_START:
-                c = get_char(csv);
+                c = _csv_get_char(csv);
                 if(c == EOF)
                     return 0;
                 state = FIELD_START;
-                unget_char(csv, c);
+                _csv_unget_char(csv, c);
             break;
             case FIELD_START:
                 if(csv->nf == CSV_MAX_FIELDS) {
                     csv->err = CSV_ERR_FIELDS;
                     return csv->nf;
                 }
-                c = get_char(csv);
+                c = _csv_get_char(csv);
 #if CSV_TRIM
                 while(strchr(" \t\v\f", c))
-                    c = get_char(csv);
+                    c = _csv_get_char(csv);
 #endif
                 csv->fields[csv->nf] = &csv->buffer[bump];
                 if(c == '\"')
                     state = QUOTE;
                 else {
-                    unget_char(csv, c);
+                    _csv_unget_char(csv, c);
                     start = bump;
                     state = FIELD;
                 }
             break;
             case FIELD:
-                c = get_char(csv);
+                c = _csv_get_char(csv);
                 if(c == '\r') {
-                    c = get_char(csv);
+                    c = _csv_get_char(csv);
                     if(c != '\n') {
                         csv->err = CSV_ERR_LINE_END;
                         return csv->nf;
@@ -414,17 +412,17 @@ int csv_read_record(CsvContext *csv) {
                 }
             break;
             case QUOTE:
-                c = get_char(csv);
+                c = _csv_get_char(csv);
                 if(c == EOF) {
                     csv->err = CSV_ERR_BAD_QUOTE;
                     return csv->nf;
                 }
                 if(c == '\"') {
-                    c = get_char(csv);
+                    c = _csv_get_char(csv);
                     if(c != '\"') {
 #if CSV_TRIM
                         while(strchr(" \t\v\f", c))
-                            c = get_char(csv);
+                            c = _csv_get_char(csv);
 #endif
                         if(c == EOF || c == '\n') {
                             state = RECORD_END;
@@ -470,12 +468,12 @@ void csv_context_custom(CsvContext *csv, csv_read_data_fun fun, void *data) {
     csv->err = CSV_OK;
 }
 
-static int file_input_get_line(char *str, int num, void *data) {
+static int _csv_file_input_get_line(char *str, int num, void *data) {
     size_t read;
     FILE *file = CAST(FILE*, data);
     if(feof(file))
         return 0;
-    read = fread(str, 1, num-1, file);
+    read = fread(str, 1, num, file);
     str[read] = '\0';
     if(!read)
         return 0;
@@ -483,11 +481,11 @@ static int file_input_get_line(char *str, int num, void *data) {
 }
 
 void csv_context_file(CsvContext *csv, FILE *file) {
-    assert(file);
-    csv_context_custom(csv, file_input_get_line, file);
+    assert(file != NULL);
+    csv_context_custom(csv, _csv_file_input_get_line, file);
 }
 
-static int file_input_get_line_limit(char *str, int num, void *data) {
+static int _csv_file_input_get_line_limit(char *str, int num, void *data) {
     size_t read;
     struct csv_read_limit *ll = CAST(struct csv_read_limit *, data);
     if(!ll->limit) return 0;
@@ -503,9 +501,9 @@ static int file_input_get_line_limit(char *str, int num, void *data) {
 }
 
 void csv_context_file_limit(CsvContext *csv, struct csv_read_limit *ll) {
-    assert(ll->f);
+    assert(ll->f != NULL);
     assert(ll->limit > 0);
-    csv_context_custom(csv, file_input_get_line_limit, ll);
+    csv_context_custom(csv, _csv_file_input_get_line_limit, ll);
 }
 
 int csv_count(CsvContext *csv) {
