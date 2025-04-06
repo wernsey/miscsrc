@@ -30,7 +30,7 @@ extern "C" {
 /**
  * ## Configuration
  *
- * These macros can be defined before including **csvstrm.h** in your
+ * These macros can be defined before including **strmtok.h** in your
  * C file to control the behaviour of the library.
  *
  * * `ST_STATIC` - define this to have all the functions in the
@@ -64,6 +64,8 @@ extern "C" {
  *   default value for `StrmTok.word_chars`
  * * `ST_DEFAULT_OPERATORS` (default: `NULL`) -
  *   default value for `StrmTok.operators`
+ * * `ST_DEFAULT_STRING_ESCAPE` (default: `'\\'`) -
+ *   default value for `StrmTok.cStyleEscapes`
  *
  * **Note**: Unless you declare `ST_STATIC`,
  * the buffer sizes _must_ be the same in all files that include **strmtok.h**.
@@ -124,6 +126,10 @@ extern "C" {
 
 #  ifndef ST_DEFAULT_OPERATORS
 #    define ST_DEFAULT_OPERATORS NULL
+#  endif
+
+#  ifndef ST_DEFAULT_STRING_ESCAPE
+#    define ST_DEFAULT_STRING_ESCAPE '\\'
 #  endif
 
 #  ifndef ST_UNGET_COUNT
@@ -194,6 +200,8 @@ enum st_token {
  * * `int significantEol` - If non-zero, the parser will treat carriage
  *   return characters as tokens and return `ST_EOL`. If it is zero, the
  *   carriage return characters are ignored like other whitespace.
+ * * `char stringEscape` - The parser will treat this character in strings
+ *   as an escape character
  * * `const char *comment_chars` - Characters that indicate the start of a
  *   single line comment, if comments start with a single character.
  * * `const char *single_comment` - a string that indicates the start of a
@@ -225,6 +233,7 @@ enum st_token {
  *   stream. In the case of `ST_NUMBER`, the C standard `atoi()`, `atof()`, or
  *   `strtol()` functions can be used to convert it to the appropriate numeric
  *   type.
+ * * `char last_value[]` - The prevous value of `value`
  *
  * These members are used when an error occurred in `st_next_token()` (in which
  * case `st_next_token()` will return `ST_ERROR`):
@@ -253,6 +262,7 @@ typedef struct StrmTok {
 
     int lowercaseMode;
     int significantEol;
+	int stringEscape;
 
     const char *comment_chars;
     const char *single_comment;
@@ -267,6 +277,7 @@ typedef struct StrmTok {
 
     int p;
     char value[ST_BUFFER_SIZE];
+    char last_value[ST_BUFFER_SIZE];
 
 } StrmTok;
 
@@ -357,6 +368,26 @@ _ST_EXPORT void st_init_string(StrmTok *st, struct st_string_strm *strm);
  */
 _ST_EXPORT int st_next_token(StrmTok *st);
 
+/**
+ * ### `int st_accept(StrmTok *st, int token)`
+ *
+ * Returns 1 and scans the next token if the current token matches `token`,
+ * otherwise it returns 0.
+ *
+ * If `token` is `ST_STRING` or `ST_NUMBER` or `ST_WORD`, the value should
+ * be read from `st->last_value`.
+ */
+_ST_EXPORT int st_accept(StrmTok *st, int token);
+
+/**
+ * ### `int st_expect(StrmTok *st, int token)`
+ *
+ * Returns 1 and scans the next token if the current token matches `token`,
+ * otherwise it returns 0 and sets `st->error_desc` to the appropriate error
+ * message.
+ */
+_ST_EXPORT int st_expect(StrmTok *st, int token);
+
 /* ==============================================================================
 Implementation
 ============================================================================== */
@@ -412,7 +443,10 @@ _ST_EXPORT void st_init_custom(StrmTok *st, st_read_data_fun fun, void *data) {
     st->lineno = 1;
     st->error_desc = "no error";
 
+	st->last_read = 0xFFFF;
+
     st->value[0] = '\0';
+    st->last_value[0] = '\0';
     st->p = 0;
 
     st->lowercaseMode = ST_DEFAULT_LOWERCASE_MODE;
@@ -426,6 +460,7 @@ _ST_EXPORT void st_init_custom(StrmTok *st, st_read_data_fun fun, void *data) {
     st->multi_string_end = ST_DEFAULT_MULTI_STRING_END;
     st->word_chars = ST_DEFAULT_WORD_CHARS;
     st->operators = ST_DEFAULT_OPERATORS;
+    st->stringEscape = ST_DEFAULT_STRING_ESCAPE;
 }
 
 static int _st_file_input_get_line(char *str, int num, void *data) {
@@ -488,14 +523,14 @@ _ST_EXPORT void st_init_string(StrmTok *st, struct st_string_strm *strm) {
     strm->p = 0;
 }
 
-static int match_long_token(StrmTok *st, int c, const char *token) {
+static int _st_match_long_token(StrmTok *st, int c, const char *token) {
     if(!token[0]) {
         _st_unget_char(st, c);
         return 1;
     }
     if(c == token[0]) {
         c = _st_get_char(st);
-        if(match_long_token(st, c, token + 1)) {
+        if(_st_match_long_token(st, c, token + 1)) {
             return 1;
         } else {
             _st_unget_char(st, c);
@@ -513,7 +548,8 @@ static int _st_read_string_char(StrmTok *st, int c) {
         st->error_desc = "token too long for value buffer";
         return 0;
     }
-    if(c == '\\') {
+	/* TODO: What if you want some other escape sequences? */
+    if(c == st->stringEscape) {
         c = _st_get_char(st);
         if(!c || c == '\n' || c == EOF) {
             st->error_desc = "unterminated string constant";
@@ -552,6 +588,10 @@ _ST_EXPORT int st_next_token(StrmTok *st) {
     if(st->token == ST_EOF || st->token == ST_ERROR)
         return st->token;
 
+    strcpy(st->last_value, st->value);
+	st->value[0] = '\0';
+	st->p = 0;
+
 restart:
     do {
         c = _st_get_char(st);
@@ -562,7 +602,7 @@ restart:
     } while(strchr(whitespace, c));
 
     if((st->comment_chars && strchr(st->comment_chars, c))
-        || (st->single_comment && match_long_token(st, c, st->single_comment))
+        || (st->single_comment && _st_match_long_token(st, c, st->single_comment))
     ) {
         do {
             c = _st_get_char(st);
@@ -571,20 +611,18 @@ restart:
         } while(c != '\n');
         st->lineno++;
         goto restart;
-    } else if(st->multi_comment_start && match_long_token(st, c, st->multi_comment_start)) {
+    } else if(st->multi_comment_start && _st_match_long_token(st, c, st->multi_comment_start)) {
         do {
             c = _st_get_char(st);
-        } while(!match_long_token(st, c, st->multi_comment_end));
+        } while(!_st_match_long_token(st, c, st->multi_comment_end));
         goto restart;
     }
 
     if(st->significantEol && c == '\n') {
+        st->value[0] = c;
+        st->value[1] = '\0';
         st->token = ST_EOL;
     } else if(isalpha(c) || (st->word_chars && strchr(st->word_chars, c))) {
-
-        st->value[0] = '\0';
-        st->p = 0;
-
         do {
             ST_APPEND(st->lowercaseMode ? tolower(c) : c);
             c = _st_get_char(st);
@@ -592,12 +630,7 @@ restart:
         _st_unget_char(st, c);
         st->value[st->p] = '\0';
         st->token = ST_WORD;
-
     } else if(isdigit(c)) {
-
-        st->value[0] = '\0';
-        st->p = 0;
-
         do {
             ST_APPEND(c);
             c = _st_get_char(st);
@@ -628,17 +661,14 @@ restart:
         st->value[st->p] = '\0';
         st->token = ST_NUMBER;
 
-    } else if(st->multi_string_start && match_long_token(st, c, st->multi_string_start)) {
+    } else if(st->multi_string_start && _st_match_long_token(st, c, st->multi_string_start)) {
 
         /* Why is BCC complaining here? */
         if(!st->multi_string_end)
             st->multi_string_end = st->multi_string_start;
 
-        st->value[0] = '\0';
-        st->p = 0;
-
         c = _st_get_char(st);
-        while(!match_long_token(st, c, st->multi_string_end)) {
+        while(!_st_match_long_token(st, c, st->multi_string_end)) {
             if(!_st_read_string_char(st, c))
                 goto error;
             c = _st_get_char(st);
@@ -649,9 +679,6 @@ restart:
     } else if(st->quote_chars && strchr(st->quote_chars, c)) {
         int term = c;
         c = _st_get_char(st);
-
-        st->value[0] = '\0';
-        st->p = 0;
 
         while(c != term) {
             if(c == '\n') {
@@ -681,6 +708,33 @@ eof:
 error:
     st->token = ST_ERROR;
     return st->token;
+}
+
+int st_accept(StrmTok *st, int token) {
+	if(st->token == token) {
+		st_next_token(st);
+		return 1;
+	}
+	return 0;
+}
+
+int st_expect(StrmTok *st, int token) {
+	if(st_accept(st, token))
+		return 1;
+	if(isprint(token)) 
+		snprintf(st->value, sizeof st->value, "'%c' expected", token);
+	else {		
+		switch(token) {
+			case ST_EOF: snprintf(st->value, sizeof st->value, "EOF expected"); break;
+			case ST_EOL: snprintf(st->value, sizeof st->value, "EOL expected"); break;
+			case ST_WORD: snprintf(st->value, sizeof st->value, "Word expected"); break;
+			case ST_STRING: snprintf(st->value, sizeof st->value, "\"string\" expected"); break;
+			case ST_NUMBER: snprintf(st->value, sizeof st->value, "Number expected"); break;
+			default: snprintf(st->value, sizeof st->value, "Token type %d expected", token); break;
+		}
+	}
+	st->error_desc = st->value;
+	return 0;
 }
 
 #undef ST_APPEND

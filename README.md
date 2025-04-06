@@ -7,11 +7,13 @@ Miscsrc
 
 A library of miscellaneous C functions I've written over time.
 
-| Header | Code | Description |
+| Header | Code* | Description |
 | --- | --- | --- |
 |[json.h](json.h)|[json.c](json.c)| A [JSON][] parser and serializer |
 |[csv.h](csv.h)|[csv.c](csv.c)| A set of functions to read, write and manipulate [Comma Separated Values][CSV] (CSV) files; They keep entire file file memory for manipulation
 |[csvstrm.h](csvstrm.h) | no | A streaming [CSV][] parser that reads a CSV file row-by-row.|
+|[strmtok.h](strmtok.h)| no | A string interning library.|
+|[sintern.h](sintern.h)| no | A stream tokenizing library.|
 |[ini.h](ini.h) | [ini.c](ini.c)| A parser for [INI][] configuration files|
 |[eval.h](eval.h)|[eval.c](eval.c)| A mathematical expression evaluator|
 |[wav.h](wav.h)|[wav.c](wav.c)| Functions to load and store [WAV][] files|
@@ -22,7 +24,7 @@ A library of miscellaneous C functions I've written over time.
 |[hash.h](hash.h)|[hash.c](hash.c)| A simple hash table implementation|
 |[simil.h](simil.h)|[simil.c](simil.c)| A function that compares the _similarity_ of two strings|
 |[getarg.h](getarg.h)|[getarg.c](getarg.c)| An alternative to `getopt()` called `getarg()` for platforms without _getopt()_ (such as for WIN32)|
-|[utils.h](utils.h)|[utils.h](utils.h)| A couple of utility functions.|
+|[utils.h](utils.h)|[utils.c](utils.c)| A couple of utility functions.|
 
 It is a collection of C code that I've implemented over the course of several years
 and used, tested and reused in several of my hobby projects.
