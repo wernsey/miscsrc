@@ -35,11 +35,18 @@
  * -[x] object keys as identifier names
  *    -[ ] proper ECMAScript 5.1 IdentifierName are more complicated
  *    - see <https://262.ecma-international.org/5.1/#sec-7.6>
+ *    - see also <https://mathiasbynens.be/notes/javascript-identifiers>
+ *    - I searched GitHub to see how other JSON5 parsers dealt with
+ *      it, and most either
+ *      - took any collection of non-whitespace charcters before the
+ *        ':' as the key (maybe checking for invalid escapes), or
+ *      - did what I do and take only a sequence `[_$A-Za-z][_$A-Za-z0-9]*`
+ *    - I couldn't find any that properly dealt with ECMA _IdentifierNames_
  * -[x] objects, array entries may have a trailing comma
  * -[x] single quoted strings
- * -[ ] escaped newlines in multiline strings
+ * -[x] escaped newlines in multiline strings
  *    -[x] '\r', '\n' and '\r\n'
- *    -[ ] U+2028 Line separator U+2029 Paragraph separator
+ *    -[x] U+2028 Line separator U+2029 Paragraph separator
  * -[x] U+2028 Line separator U+2029 Paragraph separator can appear
  *  unescaped in string literals
  *    -[ ] but they _should_ cause a warning if they're encountered
@@ -52,7 +59,7 @@
  *   -[x] -Infinity needs a change to the parser
  * -[x] numbers may begin with explicit plus sign
  * -[x] single and multiline comments
- * -[ ] additional whitespace characters
+ * -[x] additional whitespace characters
  *    - `isspace()` covers most of the cases
  *    - need to deal with U+00A0 Non-breaking space, U+2028 Line separator, U+2029 Paragraph separator, U+FEFF Byte order mark and Unicode Zs category
  *    - Here's the [Zs Unicode category](https://www.compart.com/en/unicode/category/Zs)
@@ -847,7 +854,57 @@ static uint32_t read_4_hex_digits(ParserContext *pc) {
     return u;
 }
 
+static int j_isspace(const char *in) {
+#if !JSON_JSON5
+    return isspace(*in) ? 1 : 0;;
+#else
+    int skip;
+    if(isspace(*in)) {
+        return 1;
+    } else if(*in & 0x80) {
+        uint32_t codepoint;
+        if((in[0] & 0xE0) == 0xC0 && (in[1] & 0xC0) == 0x80) {
+            codepoint = ((in[0] & 0x1F) << 6) | (in[1] & 0x3F);
+            skip = 2;
+        } else if((in[0] & 0xF0) == 0xE0  && (in[1] & 0xC0) == 0x80 && (in[2] & 0xC0) == 0x80) {
+            codepoint = ((in[0] & 0x0F) << 12) | ((in[1] & 0x3F) << 6) | (in[2] & 0x3F);
+            skip = 3;
+        } else if((in[0] & 0xF8) == 0xF0 && (in[1] & 0xC0) == 0x80 && (in[2] & 0xC0) == 0x80 && (in[3] & 0xC0) == 0x80) {
+            codepoint = ((in[0] & 0x07) << 18) | ((in[1] & 0x3F) << 12) | ((in[2] & 0x3F) << 6) | (in[3] & 0x3F);
+            skip = 4;
+        } else {
+            /* Invalid, but not much we can do */
+            return 0;
+        }
+        switch(codepoint) {
+            case 0x2028:
+            case 0x2029:
+            /* Unicode Zs category https://www.compart.com/en/unicode/category/Zs */
+            case 0x00A0:
+            case 0x1680:
+            case 0x2000:
+            case 0x2001:
+            case 0x2002:
+            case 0x2003:
+            case 0x2004:
+            case 0x2005:
+            case 0x2006:
+            case 0x2007:
+            case 0x2008:
+            case 0x2009:
+            case 0x200A:
+            case 0x202F:
+            case 0x205F:
+            case 0x3000: return skip;
+            default: return 0;
+        }
+    }
+    return 0;
+#endif
+}
+
 static int getsym(ParserContext *pc) {
+    int skip = 1;
 
 #if JSON_JSON5 || JSON_COMMENTS
 start:
@@ -858,10 +915,10 @@ start:
     if(pc->in[0] == '\0') {
         return (pc->sym = P_END);
     }
-	while(isspace(pc->in[0])) {
+	while((skip = j_isspace(pc->in))) {
 		if(pc->in[0] == '\n')
 			pc->lineno++;
-		pc->in++;
+		pc->in += skip;
 	}
 
 #if JSON_JSON5 || JSON_COMMENTS
@@ -1041,13 +1098,25 @@ start:
                             } break;
                             case '\n':
                             case '\r':
-                            /* TODO: U+2028 Line separator and U+2029 Paragraph separator */
+                            /* U+2028 Line separator and U+2029 Paragraph separator are handled below */
                             {
                                 if(pc->in[0] == '\r' && pc->in[1] == '\n')
                                     pc->in++;
                                 pc->in++;
                             } break;
-                            default: append_char(pc, pc->in[0]); pc->in++; break;
+                            default: {
+                                if(isdigit(pc->in[0])) {
+                                    set_textf(pc, "bad escape sequence '\\%c'", pc->in[0]);
+                                    return (pc->sym = P_ERROR);
+                                }
+                                if((unsigned char)pc->in[0] == 0xE2 && (unsigned char)pc->in[1] == 0x80 &&
+                                    ((unsigned char)pc->in[2] == 0xA8 || (unsigned char)pc->in[2] == 0xA9)) {
+                                    /* U+2028 Line separator and U+2029 Paragraph separator */
+                                    pc->in += 3;
+                                    break;
+                                }
+                                append_char(pc, pc->in[0]); pc->in++;
+                            }break;
 #else
                             default: {
                                 set_textf(pc, "bad escape sequence '\\%c'", pc->in[0]);
