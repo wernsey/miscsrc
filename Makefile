@@ -32,11 +32,11 @@ else
   TESTS=$(TEST_SOURCES:%.c=%)
 endif
 
-all: $(LIB) $(TESTS) doc
+all: $(LIB) $(TESTS) docs
 
 lib: $(LIB)
 
-doc : ./docs $(DOCS)
+docs : $(DOCS)
 
 debug:
 	make BUILD=debug
@@ -88,13 +88,13 @@ test/test_sim$(EXE): test/test_sim.o simil.o
 test/test_json$(EXE): test/test_json.o json.o
 test/test_csvstrm$(EXE): test/test_csvstrm.o
 
-docs:
+docs_dir:
 	mkdir -p docs
 
-docs/%.html: %.h d.awk
+docs/%.html: %.h d.awk | docs_dir
 	awk -f d.awk -vTitle=$< $< > $@
 
-docs/readme.html: README.md d.awk
+docs/readme.html: README.md d.awk | docs_dir
 	awk -f d.awk -v Clean=1 -vTitle=$< $< > $@
 
 .PHONY : clean

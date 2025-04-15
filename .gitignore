@@ -17,3 +17,4 @@ test/test_json
 test/test_list
 test/test_rx
 test/test_sim
+test/test_csvstrm

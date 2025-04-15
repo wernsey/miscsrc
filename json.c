@@ -22,10 +22,42 @@
  * Here's some other examples why JSON parsing is a minefield:
  * [Unintuitive JSON Parsing](https://nullprogram.com/blog/2019/12/28/)
  *
- * TODO: I'm not against extending this to [JSON5](https://json5.org/)
- * in principle (See my comments about why I allow comments below).
- * I'm thinking I should parse JSON5 and only emit strict JSON, or
- * perhaps have separate `json_parse()` and `json_parse5()` functions
+ * It can now parse [JSON5](https://json5.org/) (though it is still
+ * missing some unicode-specific features; see below).
+ *
+ * The philosophy is to be [robust]: be able to parse JSON5 ("be liberal in what you
+ * accept") but to only ever emit strict JSON ("be conservative in what you send").
+ *
+ * The JSON5 features can be enabled or disabled through the JSON_JSON5 preprocessor flag.
+ *
+ * JSON5 checklist, per <https://spec.json5.org>:
+ *
+ * -[x] object keys as identifier names
+ *    -[ ] proper ECMAScript 5.1 IdentifierName are more complicated
+ *    - see <https://262.ecma-international.org/5.1/#sec-7.6>
+ * -[x] objects, array entries may have a trailing comma
+ * -[x] single quoted strings
+ * -[ ] escaped newlines in multiline strings
+ *    -[x] '\r', '\n' and '\r\n'
+ *    -[ ] U+2028 Line separator U+2029 Paragraph separator
+ * -[x] U+2028 Line separator U+2029 Paragraph separator can appear
+ *  unescaped in string literals
+ *    -[ ] but they _should_ cause a warning if they're encountered
+ *    -[ ] and should be escaped when they're emitted
+ * -[x] strings may include character escapes
+ * -[x] hex numbers
+ * -[x] numbers with leading/trailing decimal point
+ * -[x] positive infinity, negative infinity and NaN numbers
+ *   -[x] Infinity and NaN
+ *   -[x] -Infinity needs a change to the parser
+ * -[x] numbers may begin with explicit plus sign
+ * -[x] single and multiline comments
+ * -[ ] additional whitespace characters
+ *    - `isspace()` covers most of the cases
+ *    - need to deal with U+00A0 Non-breaking space, U+2028 Line separator, U+2029 Paragraph separator, U+FEFF Byte order mark and Unicode Zs category
+ *    - Here's the [Zs Unicode category](https://www.compart.com/en/unicode/category/Zs)
+ *
+ * [robust]: https://en.wikipedia.org/wiki/Robustness_principle
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,6 +73,13 @@
 
 typedef struct HashTable HashTable;
 typedef struct Array Array;
+
+#ifndef JSON_JSON5
+#  define JSON_JSON5 1
+#  ifndef JSON_BAD_NUMBERS_AS_STRINGS
+#    define JSON_BAD_NUMBERS_AS_STRINGS 1
+#  endif
+#endif
 
 /*
  * I am aware of the reasons for [the JSON spec not supporting comments][no-comments],
@@ -683,14 +722,20 @@ static int init_emitter(Emitter *e, size_t initial_size) {
   Lexical Analyzer
 ============================================================= */
 
-#define P_ERROR     -1
-#define P_END       0
-#define P_NUMBER    1
-#define P_STRING    2
-#define P_NULL      3
-#define P_TRUE      4
-#define P_FALSE     5
-#define P_BOM       99
+enum token_types {
+    P_ERROR = -1,
+    P_END,
+    P_NUMBER,
+    P_XNUMBER,
+    P_INFINITY,
+    P_NAN,
+    P_STRING,
+    P_IDENTIFIER,
+    P_NULL,
+    P_TRUE,
+    P_FALSE,
+    P_BOM
+};
 
 typedef struct  {
     const char *in;
@@ -804,7 +849,7 @@ static uint32_t read_4_hex_digits(ParserContext *pc) {
 
 static int getsym(ParserContext *pc) {
 
-#if JSON_COMMENTS
+#if JSON_JSON5 || JSON_COMMENTS
 start:
 #endif
 
@@ -819,7 +864,7 @@ start:
 		pc->in++;
 	}
 
-#if JSON_COMMENTS
+#if JSON_JSON5 || JSON_COMMENTS
 	if(pc->in[0] == '/' && pc->in[1] == '/') {
 		pc->in += 2;
         while(pc->in[0] != '\n' && pc->in[0] != '\0')
@@ -847,27 +892,67 @@ start:
 
     start_text(pc);
 
-    if(isalpha(pc->in[0])) {
-		while(isalpha(pc->in[0]))
+    if(isalpha(pc->in[0]) || pc->in[0] == '_' || pc->in[0] == '$') {
+
+#if JSON_JSON5
+        /* FIXME: ECMAScript 5.1 IdentifierNames are a bit more
+        complicated than this */
+        while(isalnum(pc->in[0]) || pc->in[0] == '_' || pc->in[0] == '$')
 			append_char(pc, *(pc->in++));
+#else
+        while(isalpha(pc->in[0]))
+			append_char(pc, *(pc->in++));
+#endif
+
         if(!strcmp(pc->e.buffer, "null"))
             return (pc->sym = P_NULL);
         else if(!strcmp(pc->e.buffer, "true"))
             return (pc->sym = P_TRUE);
         else if(!strcmp(pc->e.buffer, "false"))
             return (pc->sym = P_FALSE);
+#if JSON_JSON5
+        else if(!strcmp(pc->e.buffer, "Infinity")) {
+            return (pc->sym = P_INFINITY);
+        } else if(!strcmp(pc->e.buffer, "NaN")) {
+            return (pc->sym = P_NAN);
+        } else {
+            return (pc->sym = P_IDENTIFIER);
+        }
+#else
 
         set_textf(pc, "unknown keyword '%s'", pc->e.buffer);
         return (pc->sym = P_ERROR);
+#endif
 
-	} else if(isdigit(pc->in[0]) || pc->in[0] == '-') {
-		pc->sym = P_NUMBER;
-        if(pc->in[0] == '-')
+    } else if(isdigit(pc->in[0]) || pc->in[0] == '.') {
+
+#if JSON_JSON5
+        if(pc->in[0] == '0' && (pc->in[1] == 'x' || pc->in[1] == 'X')) {
+            pc->in += 2;
+            while(isxdigit(pc->in[0])) {
+                append_char(pc, *(pc->in++));
+            }
+            return (pc->sym = P_XNUMBER);
+        }
+        if(pc->in[0] == '.')
 			append_char(pc, *(pc->in++));
+#else
+        if(pc->in[0] == '.') {
+            set_textf(pc, "leading '.' in number");
+            return (pc->sym = P_ERROR);
+        }
+#endif
+
 		while(isdigit(pc->in[0]))
 			append_char(pc, *(pc->in++));
 		if(pc->in[0] == '.') {
 			append_char(pc, *(pc->in++));
+#if !JSON_JSON5
+            if(!isdigit(pc->in[0])) {
+                set_textf(pc, "trailing '.' in number");
+                return (pc->sym = P_ERROR);
+            }
+#endif
 			while(isdigit(pc->in[0]))
 				append_char(pc, *(pc->in++));
 		}
@@ -879,9 +964,14 @@ start:
 				append_char(pc, *(pc->in++));
 		}
         return (pc->sym = P_NUMBER);
+#if JSON_JSON5
+    } else if(pc->in[0] == '"' || pc->in[0] == '\'') {
+#else
 	} else if(pc->in[0] == '"') {
+#endif
+        int term = pc->in[0];
 		pc->in++;
-		while(pc->in[0] != '"') {
+		while(pc->in[0] != term) {
 			switch(pc->in[0]) {
 				case '\0' :
 				case '\n' : {
@@ -927,10 +1017,45 @@ start:
 									return (pc->sym = P_ERROR);
                                 }
                             } break;
-							default: {
-									set_textf(pc, "bad escape sequence '\\%c'", pc->in[0]);
+#if JSON_JSON5
+                            case '\'' : append_char(pc, '\''); pc->in++; break;
+                            case 'v' : append_char(pc, '\v'); pc->in++; break;
+                            case '0' : append_char(pc, '\0'); pc->in++; break;
+                            case 'x' : {
+                                int n,i;
+                                pc->in++;
+                                if(!isxdigit(pc->in[0]) || !isxdigit(pc->in[1])) {
+                                    set_textf(pc, "bad '\\x' escape sequence");
 									return (pc->sym = P_ERROR);
-								}
+                                }
+                                for(i = 0, n = 0; i < 2; i++) {
+                                    n <<= 4;
+                                    if(isdigit(pc->in[0])) {
+                                        n += pc->in[0] - '0';
+                                    } else {
+                                        n += tolower(pc->in[0]) - 'a' + 10;
+                                    }
+                                    pc->in++;
+                                }
+                                append_char(pc, n);
+                            } break;
+                            case '\n':
+                            case '\r':
+                            /* TODO: U+2028 Line separator and U+2029 Paragraph separator */
+                            {
+                                if(pc->in[0] == '\r' && pc->in[1] == '\n')
+                                    pc->in++;
+                                pc->in++;
+                            } break;
+                            default: append_char(pc, pc->in[0]); pc->in++; break;
+#else
+                            default: {
+                                set_textf(pc, "bad escape sequence '\\%c'", pc->in[0]);
+                                return (pc->sym = P_ERROR);
+                            }
+#endif
+
+
 						}
 					} break;
 				default : {
@@ -940,7 +1065,7 @@ start:
 		}
 		pc->in++;
         return (pc->sym = P_STRING);
-	} else if(strchr("{}[]:,", pc->in[0])) {
+	} else if(strchr("{}[]:,+-", pc->in[0])) {
 		return (pc->sym = *(pc->in++));
 	} else {
 		set_textf(pc, "Unexpected token '%c'", pc->in[0]);
@@ -1000,8 +1125,13 @@ static JSON *json_parse_object(ParserContext *pc) {
 		do {
 			char *key;
 			JSON *value;
-			if(pc->sym != P_STRING) {
-                json_error("line %d: string expected", pc->lineno);
+
+#if JSON_JSON5
+            if(pc->sym == '}') break;
+#endif
+
+			if(pc->sym != P_STRING && pc->sym != P_IDENTIFIER) {
+                json_error("line %d: key expected", pc->lineno);
                 goto error;
             }
 #if JSON_INTERN_STRINGS
@@ -1058,7 +1188,11 @@ static JSON *json_parse_array(ParserContext *pc) {
 	accept(pc, '[');
 	if(pc->sym != ']') {
 		do {
-			JSON *value = json_parse_value(pc);
+			JSON *value;
+#if JSON_JSON5
+            if(pc->sym == ']') break;
+#endif
+            value = json_parse_value(pc);
 			if(!value)
                 goto error;
             ar_append(v->value.array, value);
@@ -1083,9 +1217,31 @@ static JSON *json_parse_value(ParserContext *pc) {
 	else if(pc->sym == '[')
 		return json_parse_array(pc);
 	else {
+        int neg;
         JSON *v = NULL;
-		if(pc->sym == P_NUMBER) {
-			v = json_new_number(atof(pc->e.buffer));
+        double sign = 1.0;
+        if((neg = accept(pc, '-')) || accept(pc, '+')) {
+            if(pc->sym != P_NUMBER && pc->sym != P_INFINITY) {
+                json_error("line %d: number expected", pc->lineno);
+                return NULL;
+            }
+            if(neg) sign = -1.0;
+        }
+
+		if(pc->sym == P_ERROR) {
+			json_error("line %d: %s", pc->lineno, pc->e.buffer);
+            return NULL;
+        } else if(pc->sym == P_NUMBER) {
+			v = json_new_number(sign * atof(pc->e.buffer));
+        /* xnumber, infinity and nan are JSON5 only, but the
+        lexer won't return them in the JSON only case */
+        } else if(pc->sym == P_XNUMBER) {
+            int n = strtol(pc->e.buffer, NULL, 16);
+			v = json_new_number(n);
+        } else if(pc->sym == P_INFINITY) {
+            v = json_new_number(sign * INFINITY);
+        } else if(pc->sym == P_NAN) {
+            v = json_new_number(NAN);
 		} else if(pc->sym == P_STRING) {
             v = malloc(sizeof *v);
             if(v) {
@@ -1104,7 +1260,7 @@ static JSON *json_parse_value(ParserContext *pc) {
 		}else if(pc->sym == P_NULL) {
 			v = json_null();
 		} else {
-			json_error("line %d: %s", pc->lineno, pc->e.buffer);
+			json_error("line %d: unexpected symbol", pc->lineno);
             return NULL;
 		}
         if(!v) {
