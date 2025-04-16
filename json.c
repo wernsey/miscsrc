@@ -26,7 +26,7 @@
  * missing some unicode-specific features; see below).
  *
  * The philosophy is to be [robust]: be able to parse JSON5 ("be liberal in what you
- * accept") but to only ever emit strict JSON ("be conservative in what you send").
+ * accept"), but to only ever emit strict JSON ("be conservative in what you send").
  *
  * The JSON5 features can be enabled or disabled through the JSON_JSON5 preprocessor flag.
  *
@@ -50,7 +50,7 @@
  * -[x] U+2028 Line separator U+2029 Paragraph separator can appear
  *  unescaped in string literals
  *    -[ ] but they _should_ cause a warning if they're encountered
- *    -[ ] and should be escaped when they're emitted
+ *    -[x] and should be escaped when they're emitted
  * -[x] strings may include character escapes
  * -[x] hex numbers
  * -[x] numbers with leading/trailing decimal point
@@ -86,23 +86,6 @@ typedef struct Array Array;
 #  ifndef JSON_BAD_NUMBERS_AS_STRINGS
 #    define JSON_BAD_NUMBERS_AS_STRINGS 1
 #  endif
-#endif
-
-/*
- * I am aware of the reasons for [the JSON spec not supporting comments][no-comments],
- * but I also subscribe to [Postel's Law][postel], so the parser has support for
- * comments by default.
- *
- * The parser can be forced to be strict about not allowing comments by defining
- * `JSON_COMMENTS` as 0.
- *
- * Serialization does not ever emit comments, though.
- *
- * [no-comments]: https://stackoverflow.com/a/10976934/115589
- * [postel]: https://en.wikipedia.org/wiki/Robustness_principle
- */
-#ifndef JSON_COMMENTS
-#  define JSON_COMMENTS 1
 #endif
 
 /*
@@ -906,7 +889,7 @@ static int j_isspace(const char *in) {
 static int getsym(ParserContext *pc) {
     int skip = 1;
 
-#if JSON_JSON5 || JSON_COMMENTS
+#if JSON_JSON5
 start:
 #endif
 
@@ -921,7 +904,7 @@ start:
 		pc->in += skip;
 	}
 
-#if JSON_JSON5 || JSON_COMMENTS
+#if JSON_JSON5
 	if(pc->in[0] == '/' && pc->in[1] == '/') {
 		pc->in += 2;
         while(pc->in[0] != '\n' && pc->in[0] != '\0')
@@ -1290,7 +1273,7 @@ static JSON *json_parse_value(ParserContext *pc) {
         JSON *v = NULL;
         double sign = 1.0;
         if((neg = accept(pc, '-')) || accept(pc, '+')) {
-            if(pc->sym != P_NUMBER && pc->sym != P_INFINITY) {
+            if(pc->sym != P_NUMBER && pc->sym != P_XNUMBER && pc->sym != P_INFINITY) {
                 json_error("line %d: number expected", pc->lineno);
                 return NULL;
             }
@@ -1305,7 +1288,7 @@ static JSON *json_parse_value(ParserContext *pc) {
         /* xnumber, infinity and nan are JSON5 only, but the
         lexer won't return them in the JSON only case */
         } else if(pc->sym == P_XNUMBER) {
-            int n = strtol(pc->e.buffer, NULL, 16);
+            int n = sign *strtol(pc->e.buffer, NULL, 16);
 			v = json_new_number(n);
         } else if(pc->sym == P_INFINITY) {
             v = json_new_number(sign * INFINITY);
@@ -1425,7 +1408,11 @@ static int serialize_string(Emitter *e, const char *str) {
     assert(str);
     EMIT(e,'"');
     while(*str) {
-        if(strchr("\"\\/\b\f\n\r\t",*str)) {
+        if((unsigned char)str[0] == 0xE2 && (unsigned char)str[1] == 0x80 && ((unsigned char)str[2] == 0xA8 || (unsigned char)str[2] == 0xA9)) {
+            emit_text(e, (unsigned char)str[2] == 0xA8 ? "\\u2028" : "\\u2029");
+            str += 3;
+            continue;
+        } else if(strchr("\"\\/\b\f\n\r\t",*str)) {
             EMIT(e, '\\');
             switch(*str) {
                 case '\"': EMIT(e, '"'); break;
