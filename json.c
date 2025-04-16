@@ -11,13 +11,15 @@
  * [rfc7159]: https://tools.ietf.org/html/rfc7159
  * [rfc4627]: https://tools.ietf.org/id/draft-ietf-json-rfc4627bis-09.html
  *
- *
  * This is free and unencumbered software released into the public domain.
  * http://unlicense.org/
  *
- * TODO: I came across this test suite for JSON parsers:
+ * I ran it through this test suite for JSON parsers and fixed the issues:
  * [Parsing JSON is a Minefield](http://seriot.ch/parsing_json.php);
- * I should maybe try running this parser through it one day.
+ *
+ * The only test it fails is `n_multidigit_number_then_00.json`, a
+ * series of digits followed by a `\0` character. I don't see how it can
+ * be fixed because the parser sees the `\0` as the end of the input stream.
  *
  * Here's some other examples why JSON parsing is a minefield:
  * [Unintuitive JSON Parsing](https://nullprogram.com/blog/2019/12/28/)
@@ -86,6 +88,13 @@ typedef struct Array Array;
 #  ifndef JSON_BAD_NUMBERS_AS_STRINGS
 #    define JSON_BAD_NUMBERS_AS_STRINGS 1
 #  endif
+#endif
+
+/*
+ * Guard against too many nested objects/arrays.
+ */
+#ifndef JSON_MAX_NESTING
+#  define JSON_MAX_NESTING  100
 #endif
 
 /*
@@ -839,7 +848,10 @@ static uint32_t read_4_hex_digits(ParserContext *pc) {
 
 static int j_isspace(const char *in) {
 #if !JSON_JSON5
-    return isspace(*in) ? 1 : 0;;
+    switch(in[0]) {
+		case ' ': case '\t': case '\r': case '\n': return 1;
+		default: return 0;
+	}
 #else
     int skip;
     if(isspace(*in)) {
@@ -886,8 +898,14 @@ static int j_isspace(const char *in) {
 #endif
 }
 
+#if JSON_JSON5
+#  define OPERATORS "{}[]:,+-"
+#else
+#  define OPERATORS "{}[]:,-"
+#endif
+
 static int getsym(ParserContext *pc) {
-    int skip = 1;
+    int skip;
 
 #if JSON_JSON5
 start:
@@ -965,6 +983,7 @@ start:
 #endif
 
     } else if(isdigit(pc->in[0]) || pc->in[0] == '.') {
+		int dec = 0, eng = 0;
 
 #if JSON_JSON5
         if(pc->in[0] == '0' && (pc->in[1] == 'x' || pc->in[1] == 'X')) {
@@ -986,6 +1005,7 @@ start:
 		while(isdigit(pc->in[0]))
 			append_char(pc, *(pc->in++));
 		if(pc->in[0] == '.') {
+			dec = 1;
 			append_char(pc, *(pc->in++));
 #if !JSON_JSON5
             if(!isdigit(pc->in[0])) {
@@ -997,17 +1017,29 @@ start:
 				append_char(pc, *(pc->in++));
 		}
 		if(tolower(pc->in[0]) == 'e') {
+			eng = 1;
 			append_char(pc, *(pc->in++));
 			if(strchr("+-", pc->in[0]))
 				append_char(pc, *(pc->in++));
+			if(!isdigit(pc->in[0])) {
+				set_textf(pc, "digits expected after `e`");
+                return (pc->sym = P_ERROR);
+			}
 			while(isdigit(pc->in[0]))
 				append_char(pc, *(pc->in++));
 		}
+		if(!dec && !eng && pc->e.buffer[0] == '0' && pc->e.buffer[1] != '\0') {
+			set_textf(pc, "integer with leading '0'");
+			return (pc->sym = P_ERROR);
+		}
         return (pc->sym = P_NUMBER);
-#if JSON_JSON5
     } else if(pc->in[0] == '"' || pc->in[0] == '\'') {
-#else
-	} else if(pc->in[0] == '"') {
+
+#if !JSON_JSON5
+		if(pc->in[0] == '\'') {
+			set_textf(pc, "'single quoted' strings are not allowed");
+			return (pc->sym = P_ERROR);
+		}
 #endif
         int term = pc->in[0];
 		pc->in++;
@@ -1016,6 +1048,10 @@ start:
 				case '\0' :
 				case '\n' : {
 						set_textf(pc, "unterminated string literal");
+						return (pc->sym = P_ERROR);
+					}
+				case '\t' : {
+						set_textf(pc, "unescaped tab in string literal");
 						return (pc->sym = P_ERROR);
 					}
 				case '\\' : {
@@ -1106,8 +1142,6 @@ start:
                                 return (pc->sym = P_ERROR);
                             }
 #endif
-
-
 						}
 					} break;
 				default : {
@@ -1117,10 +1151,14 @@ start:
 		}
 		pc->in++;
         return (pc->sym = P_STRING);
-	} else if(strchr("{}[]:,+-", pc->in[0])) {
+	} else if(strchr(OPERATORS, pc->in[0])) {
+		if((pc->in[0] == '-' || pc->in[0] == '+') && j_isspace(pc->in+1)) {
+			set_textf(pc, "whitespace not allowed after '%c' sign", pc->in);
+			return (pc->sym = P_ERROR);
+		}
 		return (pc->sym = *(pc->in++));
 	} else {
-		set_textf(pc, "Unexpected token '%c'", pc->in[0]);
+		set_textf(pc, "unexpected token '%c'", pc->in[0]);
 	}
     return (pc->sym = P_ERROR);
 }
@@ -1160,11 +1198,11 @@ static int accept(ParserContext *pc, int sym) {
 	return 0;
 }
 
-static JSON *json_parse_object(ParserContext *pc);
-static JSON *json_parse_array(ParserContext *pc);
-static JSON *json_parse_value(ParserContext *pc);
+static JSON *json_parse_object(ParserContext *pc, int level);
+static JSON *json_parse_array(ParserContext *pc, int level);
+static JSON *json_parse_value(ParserContext *pc, int level);
 
-static JSON *json_parse_object(ParserContext *pc) {
+static JSON *json_parse_object(ParserContext *pc, int level) {
 
 	JSON *v = json_new_object();
     if(!v) {
@@ -1205,7 +1243,7 @@ static JSON *json_parse_object(ParserContext *pc) {
                 goto error;
             }
 
-			value = json_parse_value(pc);
+			value = json_parse_value(pc, level);
 			if(!value) {
 				str_release(key);
                 goto error;
@@ -1229,7 +1267,7 @@ error:
     return NULL;
 }
 
-static JSON *json_parse_array(ParserContext *pc) {
+static JSON *json_parse_array(ParserContext *pc, int level) {
 
     JSON *v = json_new_array();
     if(!v) {
@@ -1244,7 +1282,7 @@ static JSON *json_parse_array(ParserContext *pc) {
 #if JSON_JSON5
             if(pc->sym == ']') break;
 #endif
-            value = json_parse_value(pc);
+            value = json_parse_value(pc, level);
 			if(!value)
                 goto error;
             ar_append(v->value.array, value);
@@ -1263,11 +1301,17 @@ error:
     return NULL;
 }
 
-static JSON *json_parse_value(ParserContext *pc) {
+static JSON *json_parse_value(ParserContext *pc, int level) {
+
+	if(level > JSON_MAX_NESTING) {
+		json_error("line %d: too many nested entities", pc->lineno);
+		return NULL;
+	}
+
 	if(pc->sym == '{')
-		return json_parse_object(pc);
+		return json_parse_object(pc, level + 1);
 	else if(pc->sym == '[')
-		return json_parse_array(pc);
+		return json_parse_array(pc, level + 1);
 	else {
         int neg;
         JSON *v = NULL;
@@ -1339,7 +1383,13 @@ JSON *json_parse(const char *text) {
         return NULL;
     }
 
-    JSON *j = json_parse_value(&pc);
+    JSON *j = json_parse_value(&pc, 0);
+
+	if(j && !accept(&pc, P_END)) {
+		json_error("end of file expected");
+		json_release(j);
+		return NULL;
+	}
 
     destroy_parser(&pc);
     return j;
