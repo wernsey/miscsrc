@@ -1,72 +1,11 @@
 /*
  * JSON Parser and serializer.
  *
- * * [www.json.org][json.org]
- * * [RFC 7159][rfc7159]
- * * [RFC 4627][rfc4627]
- *
  * See `json.h` for more info
- *
- * [json.org]: https://www.json.org/json-en.html
- * [rfc7159]: https://tools.ietf.org/html/rfc7159
- * [rfc4627]: https://tools.ietf.org/id/draft-ietf-json-rfc4627bis-09.html
  *
  * This is free and unencumbered software released into the public domain.
  * http://unlicense.org/
  *
- * I ran it through this test suite for JSON parsers and fixed the issues:
- * [Parsing JSON is a Minefield](http://seriot.ch/parsing_json.php);
- *
- * The only test it fails is `n_multidigit_number_then_00.json`, a
- * series of digits followed by a `\0` character. I don't see how it can
- * be fixed because the parser sees the `\0` as the end of the input stream.
- *
- * Here's some other examples why JSON parsing is a minefield:
- * [Unintuitive JSON Parsing](https://nullprogram.com/blog/2019/12/28/)
- *
- * It can now parse [JSON5](https://json5.org/) (though it is still
- * missing some unicode-specific features; see below).
- *
- * The philosophy is to be [robust]: be able to parse JSON5 ("be liberal in what you
- * accept"), but to only ever emit strict JSON ("be conservative in what you send").
- *
- * The JSON5 features can be enabled or disabled through the JSON_JSON5 preprocessor flag.
- *
- * JSON5 checklist, per <https://spec.json5.org>:
- *
- * -[x] object keys as identifier names
- *    -[ ] proper ECMAScript 5.1 IdentifierName are more complicated
- *    - see <https://262.ecma-international.org/5.1/#sec-7.6>
- *    - see also <https://mathiasbynens.be/notes/javascript-identifiers>
- *    - I searched GitHub to see how other JSON5 parsers dealt with
- *      it, and most either
- *      - took any collection of non-whitespace charcters before the
- *        ':' as the key (maybe checking for invalid escapes), or
- *      - did what I do and take only a sequence `[_$A-Za-z][_$A-Za-z0-9]*`
- *    - I couldn't find any that properly dealt with ECMA _IdentifierNames_
- * -[x] objects, array entries may have a trailing comma
- * -[x] single quoted strings
- * -[x] escaped newlines in multiline strings
- *    -[x] '\r', '\n' and '\r\n'
- *    -[x] U+2028 Line separator U+2029 Paragraph separator
- * -[x] U+2028 Line separator U+2029 Paragraph separator can appear
- *  unescaped in string literals
- *    -[ ] but they _should_ cause a warning if they're encountered
- *    -[x] and should be escaped when they're emitted
- * -[x] strings may include character escapes
- * -[x] hex numbers
- * -[x] numbers with leading/trailing decimal point
- * -[x] positive infinity, negative infinity and NaN numbers
- *   -[x] Infinity and NaN
- *   -[x] -Infinity needs a change to the parser
- * -[x] numbers may begin with explicit plus sign
- * -[x] single and multiline comments
- * -[x] additional whitespace characters
- *    - `isspace()` covers most of the cases
- *    - need to deal with U+00A0 Non-breaking space, U+2028 Line separator, U+2029 Paragraph separator, U+FEFF Byte order mark and Unicode Zs category
- *    - Here's the [Zs Unicode category](https://www.compart.com/en/unicode/category/Zs)
- *
- * [robust]: https://en.wikipedia.org/wiki/Robustness_principle
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -872,25 +811,14 @@ static int j_isspace(const char *in) {
             return 0;
         }
         switch(codepoint) {
-            case 0x2028:
-            case 0x2029:
+            case 0x2028: case 0x2029:
             /* Unicode Zs category https://www.compart.com/en/unicode/category/Zs */
-            case 0x00A0:
-            case 0x1680:
-            case 0x2000:
-            case 0x2001:
-            case 0x2002:
-            case 0x2003:
-            case 0x2004:
-            case 0x2005:
-            case 0x2006:
-            case 0x2007:
-            case 0x2008:
-            case 0x2009:
-            case 0x200A:
-            case 0x202F:
-            case 0x205F:
-            case 0x3000: return skip;
+            case 0x00A0: case 0x1680:
+            case 0x2000: case 0x2001: case 0x2002: case 0x2003:
+            case 0x2004: case 0x2005: case 0x2006: case 0x2007:
+            case 0x2008: case 0x2009: case 0x200A: case 0x202F:
+            case 0x205F: case 0x3000:
+                return skip;
             default: return 0;
         }
     }
@@ -984,6 +912,15 @@ start:
 
     } else if(isdigit(pc->in[0]) || pc->in[0] == '.') {
 		int dec = 0, eng = 0;
+
+        /* FIXME: The way I deal with numbers here does not
+         * strictly adhere to how JSON is supposed to parse them.
+         * To wit, I don't treat a leading zero separately from other
+         * digits.
+         * My way does have the advantage of a more friendly error
+         * message, though.
+         * See here: https://nullprogram.com/blog/2019/12/28/
+         */
 
 #if JSON_JSON5
         if(pc->in[0] == '0' && (pc->in[1] == 'x' || pc->in[1] == 'X')) {

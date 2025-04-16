@@ -1,0 +1,25 @@
+{
+    // JSON5 test
+    weirdWhiteSpace :     '<--here',
+    "foo": +12,
+    x: -1.26484e+07,
+    "neg-foo": -12,
+    bar: .13,
+    baz: 13.,
+    fred : 0xFE,
+    'quote' : 'string\' \x3F',
+    multiline : 'This string continues \
+on the next line',
+    specialMultiline : 'this string has an \ escaped line separator U+2028',
+    trailing_comma : ['a', 'b', 'c', ],
+    'infinity': Infinity,
+    'neg-infinity': -Infinity,
+    'nan': NaN,
+    $linesep: '',
+    pie: "π",
+    negativeHex: -0xC0FFEE,
+    esacpes: '\A\C\/\D\C',
+    unescapedSeparators: "  and  ",
+    // technically, this should work, but I can't deal with it right now.
+    // π: 3.14159
+}

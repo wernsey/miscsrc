@@ -1,7 +1,41 @@
 /**
  * # JSON Parser
  *
- * An over-engineered JSON parser and serializer.
+ * An over-engineered [JSON][] parser and serializer.
+ *
+ * I ran it through this test suite for JSON parsers and fixed the issues:
+ * [Parsing JSON is a Minefield](http://seriot.ch/parsing_json.php);
+ *
+ * The only test it fails is `n_multidigit_number_then_00.json`, a
+ * series of digits followed by a `\0` character. I don't see how it can
+ * be fixed because the parser sees the `\0` as the end of the input stream.
+ *
+ * Here's some other examples why JSON parsing is a minefield:
+ * [Unintuitive JSON Parsing](https://nullprogram.com/blog/2019/12/28/)
+ *
+ * ## JSON5 support
+ *
+ * It can now parse [JSON5](https://json5.org/) (with caveats; see below).
+ *
+ * The philosophy is to be [robust]: be able to parse JSON5 ("be liberal in what you
+ * accept"), but to only ever emit strict JSON ("be conservative in what you send").
+ *
+ * The JSON5 features can be enabled or disabled through the `JSON_JSON5` preprocessor flag.
+ *
+ * It comes with these caveats:
+ *
+ * * JSON5 calls for identifier names as object keys, but properly handling an [ECMAScript 5.1][ecma51]
+ *   _IdentifierName_ is very complicated because it needs to deal with unicode.
+ *    - I settled on a sequence of alphanumeric characters or '_' or '$' symbols that doesn't start
+ *      with a digit as identifier name. That is to say object keys kan look like `[_$A-Za-z][_$A-Za-z0-9]*`
+ *    - This seems to be in line with how other JSON parsers handle it.
+ *    - (alternatively, some JSON parsers take any collection of non-whitespace characters before the ':'
+ *      as the object key (perhaps checking ), but that approach will not work in this parser)
+ *    - see also <https://mathiasbynens.be/notes/javascript-identifiers>
+ * * JSON and JSON5 allows for U+2028 Line separator U+2029 Paragraph separator to appear
+ *   unescaped in string literals but they _should_ cause a warning if they're encountered.
+ *   The JSON library allows them to appear unescaped but does _not_ issue a warning.
+ *   - The library will escape them as `\u2028` and `\u2029` when serializing.
  *
  * ## License
  *
@@ -11,13 +45,20 @@
  *
  * ## References
  *
- * * https://www.json.org/json-en.html
- * * https://tools.ietf.org/id/draft-ietf-json-rfc4627bis-09.html
+ * * <https://www.json.org/json-en.html>
+ * * <https://en.wikipedia.org/wiki/JSON>
+ * * <https://json5.org/>
+ * * <https://tools.ietf.org/id/draft-ietf-json-rfc4627bis-09.html>
+ * * <https://tools.ietf.org/html/rfc7159>
  * * Unicode related:
- *   * https://unicodebook.readthedocs.io/index.html
- *   * https://en.wikipedia.org/wiki/UTF-8
- *   * https://en.wikipedia.org/wiki/UTF-16
+ *   * <https://unicodebook.readthedocs.io/index.html>
+ *   * <https://en.wikipedia.org/wiki/UTF-8>
+ *   * <https://en.wikipedia.org/wiki/UTF-16>
  *
+ * [JSON]: https://www.json.org
+ * [JSON5]: https://json5.org/
+ * [robust]: https://en.wikipedia.org/wiki/Robustness_principle
+ * [ecma51]: https://262.ecma-international.org/5.1/#sec-7.6
  */
 
 #ifndef JSON_H
